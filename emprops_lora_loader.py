@@ -19,11 +19,19 @@ class EmProps_Lora_Loader:
         self.lora_loader = None
         self.s3_bucket = "emprops-share"
         self.s3_prefix = "models/loras/"
+
+        # Load environment variables from .env.local
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        env_path = os.path.join(current_dir, '.env.local')
+        load_dotenv(env_path)
         
-        # Get and unescape AWS credentials from environment
+       # Get and unescape AWS credentials from environment
         self.aws_secret_key = unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
         self.aws_access_key = os.getenv('AWS_ACCESS_KEY_ID', '')
         self.aws_region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
+
+        if not self.aws_secret_key or not self.aws_access_key:
+            print("[EmProps] Warning: AWS credentials not found in .env.local")
 
     @classmethod
     def INPUT_TYPES(cls):

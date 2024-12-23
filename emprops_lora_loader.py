@@ -17,8 +17,8 @@ class EmProps_Lora_Loader:
     """
     def __init__(self):
         self.lora_loader = None
-        self.s3_bucket = "edenartlab-lfs"
-        self.s3_prefix = "comfyui/models2/loras/"
+        self.s3_bucket = "emprops-share"
+        self.s3_prefix = "models/loras/"
         
         # Get and unescape AWS credentials from environment
         self.aws_secret_key = unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))

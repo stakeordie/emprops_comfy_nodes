@@ -94,12 +94,11 @@ class EmProps_Lora_Loader:
                 
         # Download from S3
         try:
-            # Construct S3 path
+                        # Construct S3 path
             s3_path = f"{self.s3_prefix}{lora_name}"
-            print(f"[EmProps] Attempting to download from S3:")
-            print(f"  - Bucket: {self.s3_bucket}")
-            print(f"  - S3 Path: {s3_path}")
-            print(f"  - Local Path: {local_path}")
+            print(f"[EmProps] Attempting S3 download:")
+            print(f"  FROM: s3://{self.s3_bucket}/{s3_path}")
+            print(f"    TO: {local_path}")
             
             # Initialize S3 client with unescaped credentials
             s3 = boto3.client(
@@ -109,14 +108,24 @@ class EmProps_Lora_Loader:
                 region_name=self.aws_region
             )
             
-            # Download with progress bar
-            s3_path = f"{self.s3_prefix}{lora_name}"
+            try:
+                # First check if the object exists
+                s3.head_object(Bucket=self.s3_bucket, Key=s3_path)
+            except Exception as e:
+                print(f"[EmProps] S3 object not found: s3://{self.s3_bucket}/{s3_path}")
+                print(f"[EmProps] Error details: {str(e)}")
+                return None
+                
+            # Get object size for progress bar
             response = s3.get_object(Bucket=self.s3_bucket, Key=s3_path)
             total_size = response['ContentLength']
             
             with tqdm(total=total_size, unit='B', unit_scale=True) as pbar:
                 def callback(chunk):
-                    pbar.update(len(chunk))
+                    if isinstance(chunk, (int, float)):
+                        pbar.update(chunk)
+                    else:
+                        pbar.update(len(chunk))
                 
                 s3.download_file(
                     self.s3_bucket,

@@ -66,21 +66,40 @@ class EmProps_Lora_Loader:
     FUNCTION = "load_lora"
     CATEGORY = "loaders/emprops"
 
-    def download_from_s3(self, lora_name):
+    def download_from_s3(self, lora_name): 
         """Download LoRA from S3 if not found locally"""
+        # First try to get the full path if the file exists
         local_path = folder_paths.get_full_path("loras", lora_name)
         
-        # Return if file exists locally
-        if local_path is not None:
-            return local_path
+        # If file doesn't exist, we need to get the loras directory to save to
+        if local_path is None:
+            # Get the first loras directory from ComfyUI's configuration
+            lora_paths = folder_paths.folder_names_and_paths["loras"][0]
+            if not lora_paths:
+                print("[EmProps] Error: No LoRA directory configured in ComfyUI")
+                return None
+                
+            # Use the first configured loras directory
+            local_path = os.path.join(lora_paths[0], lora_name)
             
-        # Get the first loras directory path
-        lora_path = folder_paths.folder_names_and_paths["loras"][0][0]
-        local_path = os.path.join(lora_path, lora_name)
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
         
+        print(f"[EmProps] LoRA will be saved to: {local_path}")
+        
+        # Return if file already exists
+        if os.path.exists(local_path):
+            print(f"[EmProps] LoRA already exists at: {local_path}")
+            return local_path
+                
         # Download from S3
         try:
-            print(f"[EmProps] Downloading LoRA {lora_name} from S3...")
+            # Construct S3 path
+            s3_path = f"{self.s3_prefix}{lora_name}"
+            print(f"[EmProps] Attempting to download from S3:")
+            print(f"  - Bucket: {self.s3_bucket}")
+            print(f"  - S3 Path: {s3_path}")
+            print(f"  - Local Path: {local_path}")
             
             # Initialize S3 client with unescaped credentials
             s3 = boto3.client(

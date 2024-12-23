@@ -6,6 +6,7 @@ from tqdm import tqdm
 import boto3
 import folder_paths
 from nodes import LoraLoader
+from dotenv import load_dotenv  # Add this import
 
 def unescape_env_value(value):
     """Unescape _SLASH_ in environment variables"""

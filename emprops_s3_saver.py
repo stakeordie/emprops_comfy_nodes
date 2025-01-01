@@ -1,7 +1,8 @@
 import os
 import boto3
 from dotenv import load_dotenv
-from .utils import unescape_env_value
+from utils import unescape_env_value
+from helpers.image_save_helper import ImageSaveHelper
 
 class EmProps_S3_Saver:
     """
@@ -9,6 +10,7 @@ class EmProps_S3_Saver:
     """
     def __init__(self):
         self.s3_bucket = "emprops-share"
+        self.image_helper = ImageSaveHelper()
         
         # Load environment variables from .env.local
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,6 +33,10 @@ class EmProps_S3_Saver:
                 "prefix": ("STRING", {"default": "uploads/"}),
                 "filename": ("STRING", {"default": "image.png"}),
                 "bucket": ("STRING", {"default": "emprops-share"})
+            },
+            "hidden": {
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO"
             }
         }
 
@@ -39,7 +45,7 @@ class EmProps_S3_Saver:
     FUNCTION = "save_to_s3"
     CATEGORY = "EmProps"
 
-    def save_to_s3(self, images, prefix, filename, bucket):
+    def save_to_s3(self, images, prefix, filename, bucket, prompt=None, extra_pnginfo=None):
         """Save images to S3 with the specified prefix and filename"""
         try:
             # Initialize S3 client
@@ -57,18 +63,30 @@ class EmProps_S3_Saver:
             # Remove leading '/' if present
             if prefix.startswith('/'):
                 prefix = prefix[1:]
+            
+            # Process images using the helper
+            processed_images = self.image_helper.process_images(images, prompt, extra_pnginfo)
+            
+            uploaded_files = []
+            for idx, (img_bytes, _) in enumerate(processed_images):
+                # Handle multiple images by adding index to filename
+                if len(processed_images) > 1:
+                    base, ext = os.path.splitext(filename)
+                    current_filename = f"{base}_{idx}{ext}"
+                else:
+                    current_filename = filename
                 
-            # Construct the full S3 key
-            s3_key = f"{prefix}{filename}"
+                # Construct the full S3 key
+                s3_key = f"{prefix}{current_filename}"
+                
+                # Upload to S3
+                s3_client.upload_fileobj(img_bytes, bucket, s3_key)
+                uploaded_files.append(current_filename)
+                
+                print(f"[EmProps] Successfully uploaded {s3_key} to {bucket}")
             
-            # TODO: Implement actual image saving logic here
-            # This would involve converting the image tensor to a file format
-            # and uploading it to S3
-            
-            # Generate the S3 URL
-            s3_url = f"s3://{bucket}/{s3_key}"
-            
-            print(f"[EmProps] Successfully uploaded to {s3_url}")
+            # Format response for UI
+            s3_url = f"s3://{bucket}/{prefix}{uploaded_files[0]}"
             return (s3_url,)
             
         except Exception as e:

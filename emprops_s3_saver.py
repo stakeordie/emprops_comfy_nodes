@@ -1,8 +1,8 @@
 import os
 import boto3
 from dotenv import load_dotenv
-from utils import unescape_env_value
-from helpers.image_save_helper import ImageSaveHelper
+from .utils import unescape_env_value
+from .helpers.image_save_helper import ImageSaveHelper
 
 class EmProps_S3_Saver:
     """

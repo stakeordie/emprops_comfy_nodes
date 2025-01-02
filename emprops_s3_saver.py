@@ -30,7 +30,7 @@ class EmProps_S3_Saver:
             if os.path.exists(env_path):
                 load_dotenv(env_path)
                 print("[EmProps] Get and unescape AWS credentials from .env.local")
-                self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY', ''))
+                self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
                 if not self.aws_secret_key:
                     self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
                     print("[EmProps] AWS_SECRET_ACCESS_KEY_ENCODED not found in .env.local, trying AWS_SECRET_ACCESS_KEY")

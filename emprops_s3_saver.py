@@ -62,13 +62,24 @@ class EmProps_S3_Saver:
     def save_to_s3(self, images, prefix, filename, bucket, prompt=None, extra_pnginfo=None):
         """Save images to S3 with the specified prefix and filename"""
         try:
-            # Initialize S3 client
-            s3_client = boto3.client(
-                's3',
-                aws_access_key_id=self.aws_access_key,
-                aws_secret_access_key=self.aws_secret_key,
-                region_name=self.aws_region
-            )
+            # Debug: Print credentials being used (first 4 chars only)
+            if self.aws_access_key:
+                print(f"[EmProps] Debug - Using Access Key ID: {self.aws_access_key[:4]}...")
+            if self.aws_secret_key:
+                print(f"[EmProps] Debug - Using Secret Key: {self.aws_secret_key[:4]}...")
+            print(f"[EmProps] Debug - Using Region: {self.aws_region}")
+
+            # Try using default session first
+            s3_client = boto3.client('s3')
+            
+            # If that fails, try explicit credentials
+            if self.aws_access_key and self.aws_secret_key:
+                s3_client = boto3.client(
+                    's3',
+                    aws_access_key_id=self.aws_access_key,
+                    aws_secret_access_key=self.aws_secret_key,
+                    region_name=self.aws_region
+                )
             
             # Ensure prefix ends with '/'
             if not prefix.endswith('/'):

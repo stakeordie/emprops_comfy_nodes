@@ -18,6 +18,10 @@ class EmProps_S3_Saver:
         self.aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
         self.aws_region = os.getenv('AWS_DEFAULT_REGION')
 
+        print(f"[EmProps] Debug - Access Key found: {'Yes' if self.aws_access_key else 'No'}")
+        print(f"[EmProps] Debug - Secret Key found: {'Yes' if self.aws_secret_key else 'No'}")
+        print(f"[EmProps] Debug - Region found: {self.aws_region or 'No'}")
+
         # If not found, try .env.local
         if not self.aws_access_key or not self.aws_secret_key:
             current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -59,13 +63,17 @@ class EmProps_S3_Saver:
     def save_to_s3(self, images, prefix, filename, bucket, prompt=None, extra_pnginfo=None):
         """Save images to S3 with the specified prefix and filename"""
         try:
-            # Initialize S3 client
-            s3_client = boto3.client(
-                's3',
-                aws_access_key_id=self.aws_access_key,
-                aws_secret_access_key=self.aws_secret_key,
-                region_name=self.aws_region
-            )
+            # Try using default credential chain first
+            s3_client = boto3.client('s3')
+            
+            # If that fails, use explicit credentials if we have them
+            if self.aws_access_key and self.aws_secret_key:
+                s3_client = boto3.client(
+                    's3',
+                    aws_access_key_id=self.aws_access_key,
+                    aws_secret_access_key=self.aws_secret_key,
+                    region_name=self.aws_region
+                )
             
             # Ensure prefix ends with '/'
             if not prefix.endswith('/'):

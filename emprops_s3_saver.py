@@ -60,6 +60,23 @@ class EmProps_S3_Saver:
     OUTPUT_NODE = True
     DESCRIPTION = "Saves the input images to S3 with configurable bucket and prefix and displays them in the UI."
 
+    def verify_s3_upload(self, s3_client, bucket, key, max_attempts=5, delay=1):
+        """Verify that a file exists in S3 by checking with head_object"""
+        import time
+        
+        for attempt in range(max_attempts):
+            try:
+                s3_client.head_object(Bucket=bucket, Key=key)
+                return True
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    print(f"[EmProps] Waiting for S3 file to be available... attempt {attempt + 1}/{max_attempts}")
+                    time.sleep(delay)
+                else:
+                    print(f"[EmProps] Warning: Could not verify S3 upload: {str(e)}")
+                    return False
+        return False
+
     def save_to_s3(self, images, prefix, filename, bucket, prompt=None, extra_pnginfo=None):
         """Save images to S3 with the specified prefix and filename"""
         try:
@@ -70,17 +87,13 @@ class EmProps_S3_Saver:
                 print(f"[EmProps] Debug - Using Secret Key: {self.aws_secret_key[:4]}...")
             print(f"[EmProps] Debug - Using Region: {self.aws_region}")
 
-            # Try using default session first
-            s3_client = boto3.client('s3')
-            
-            # If that fails, try explicit credentials
-            if self.aws_access_key and self.aws_secret_key:
-                s3_client = boto3.client(
-                    's3',
-                    aws_access_key_id=self.aws_access_key,
-                    aws_secret_access_key=self.aws_secret_key,
-                    region_name=self.aws_region
-                )
+            # Initialize S3 client with explicit credentials
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=self.aws_access_key,
+                aws_secret_access_key=self.aws_secret_key,
+                region_name=self.aws_region
+            )
             
             # Ensure prefix ends with '/'
             if not prefix.endswith('/'):
@@ -108,6 +121,8 @@ class EmProps_S3_Saver:
                 # Save locally first
                 local_filename = f"{filename_with_path}_{counter:05}_.png"
                 local_path = os.path.join(full_output_folder, local_filename)
+
+                print(f"[EmProps] Saving to local file: {local_path}")
                 
                 # Save to local file
                 with open(local_path, 'wb') as f:
@@ -121,6 +136,11 @@ class EmProps_S3_Saver:
                 img_bytes.seek(0)
                 s3_client.upload_fileobj(img_bytes, bucket, s3_key)
                 
+                # Verify the upload
+                print(f"[EmProps] Verifying S3 upload for {s3_key}...")
+                if self.verify_s3_upload(s3_client, bucket, s3_key):
+                    print(f"[EmProps] Successfully verified S3 upload: s3://{bucket}/{s3_key}")
+                
                 # Create result entry for UI
                 results.append({
                     "filename": local_filename,
@@ -129,7 +149,8 @@ class EmProps_S3_Saver:
                     "s3_url": f"s3://{bucket}/{s3_key}"
                 })
                 
-                print(f"[EmProps] Successfully saved {local_filename} and uploaded to s3://{bucket}/{s3_key}")
+                # print results object
+                print("[EmProps] Results:", results)
             
             # Return both UI images and S3 URLs
             return {"ui": {"images": results}}

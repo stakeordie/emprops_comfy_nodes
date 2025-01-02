@@ -25,6 +25,7 @@ class EmProps_S3_Saver:
         if not self.aws_access_key or not self.aws_secret_key:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             env_path = os.path.join(current_dir, '.env.local')
+            print("[EmProps] Loading .env.local from: " + env_path)
             if os.path.exists(env_path):
                 load_dotenv(env_path)
                 # Get and unescape AWS credentials from .env.local

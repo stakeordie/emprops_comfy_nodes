@@ -21,21 +21,35 @@ class EmProps_S3_Saver:
         self.aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
         self.aws_region = os.getenv('AWS_DEFAULT_REGION')
 
-        # If not found, try .env.local
+        # If not found, try .env and .env.local files
         if not self.aws_access_key or not self.aws_secret_key:
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            env_path = os.path.join(current_dir, '.env.local')
-            print("[EmProps] Loading .env.local from: " + env_path)
+            
+            # Try .env first
+            env_path = os.path.join(current_dir, '.env')
             if os.path.exists(env_path):
+                print("[EmProps] Loading .env from: " + env_path)
                 load_dotenv(env_path)
-                print("[EmProps] Get and unescape AWS credentials from .env.local")
                 self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
                 if not self.aws_secret_key:
                     self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
-                    print("[EmProps] AWS_SECRET_ACCESS_KEY_ENCODED not found in .env.local, trying AWS_SECRET_ACCESS_KEY")
+                    print("[EmProps] AWS_SECRET_ACCESS_KEY_ENCODED not found in .env, trying AWS_SECRET_ACCESS_KEY")
                 self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
                 self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
-
+            
+            # If still not found, try .env.local
+            if not self.aws_access_key or not self.aws_secret_key:
+                env_local_path = os.path.join(current_dir, '.env.local')
+                if os.path.exists(env_local_path):
+                    print("[EmProps] Loading .env.local from: " + env_local_path)
+                    load_dotenv(env_local_path)
+                    self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
+                    if not self.aws_secret_key:
+                        self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
+                        print("[EmProps] AWS_SECRET_ACCESS_KEY_ENCODED not found in .env.local, trying AWS_SECRET_ACCESS_KEY")
+                    self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
+                    self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
+        
         # Set default region if still not set
         self.aws_region = self.aws_region or 'us-east-1'
 

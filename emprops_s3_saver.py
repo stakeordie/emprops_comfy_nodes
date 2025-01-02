@@ -13,18 +13,27 @@ class EmProps_S3_Saver:
         self.image_helper = ImageSaveHelper()
         self.type = "s3_output"  # Custom type for S3 outputs
         
-        # Load environment variables from .env.local
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        env_path = os.path.join(current_dir, '.env.local')
-        load_dotenv(env_path)
-        
-        # Get and unescape AWS credentials from environment
-        self.aws_secret_key = unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
-        self.aws_access_key = os.getenv('AWS_ACCESS_KEY_ID', '')
-        self.aws_region = os.getenv('AWS_DEFAULT_REGION', 'us-east-1')
+        # First try system environment
+        self.aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+        self.aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        self.aws_region = os.getenv('AWS_DEFAULT_REGION')
+
+        # If not found, try .env.local
+        if not self.aws_access_key or not self.aws_secret_key:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            env_path = os.path.join(current_dir, '.env.local')
+            if os.path.exists(env_path):
+                load_dotenv(env_path)
+                # Get and unescape AWS credentials from .env.local
+                self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
+                self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
+                self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
+
+        # Set default region if still not set
+        self.aws_region = self.aws_region or 'us-east-1'
 
         if not self.aws_secret_key or not self.aws_access_key:
-            print("[EmProps] Warning: AWS credentials not found in .env.local")
+            print("[EmProps] Warning: AWS credentials not found in environment or .env.local")
 
     @classmethod
     def INPUT_TYPES(cls):

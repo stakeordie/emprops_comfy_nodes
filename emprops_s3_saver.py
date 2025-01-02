@@ -11,6 +11,7 @@ class EmProps_S3_Saver:
     def __init__(self):
         self.s3_bucket = "emprops-share"
         self.image_helper = ImageSaveHelper()
+        self.type = "s3_output"  # Custom type for S3 outputs
         
         # Load environment variables from .env.local
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -40,12 +41,11 @@ class EmProps_S3_Saver:
             }
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("s3_url",)
+    RETURN_TYPES = ()  
     FUNCTION = "save_to_s3"
     CATEGORY = "EmProps"
     OUTPUT_NODE = True
-    DESCRIPTION = "Saves the input images to S3 with configurable bucket and prefix."
+    DESCRIPTION = "Saves the input images to S3 with configurable bucket and prefix and displays them in the UI."
 
     def save_to_s3(self, images, prefix, filename, bucket, prompt=None, extra_pnginfo=None):
         """Save images to S3 with the specified prefix and filename"""
@@ -69,7 +69,7 @@ class EmProps_S3_Saver:
             # Process images using the helper
             processed_images = self.image_helper.process_images(images, prompt, extra_pnginfo)
             
-            uploaded_files = []
+            results = []
             for idx, (img_bytes, _) in enumerate(processed_images):
                 # Handle multiple images by adding index to filename
                 if len(processed_images) > 1:
@@ -83,14 +83,20 @@ class EmProps_S3_Saver:
                 
                 # Upload to S3
                 s3_client.upload_fileobj(img_bytes, bucket, s3_key)
-                uploaded_files.append(current_filename)
+                
+                # Create result entry for UI
+                results.append({
+                    "filename": current_filename,
+                    "subfolder": prefix,
+                    "type": self.type,
+                    "s3_url": f"s3://{bucket}/{s3_key}"
+                })
                 
                 print(f"[EmProps] Successfully uploaded {s3_key} to {bucket}")
             
-            # Format response for UI
-            s3_url = f"s3://{bucket}/{prefix}{uploaded_files[0]}"
-            return (s3_url,)
+            # Return both UI images and S3 URLs
+            return {"ui": {"images": results}}
             
         except Exception as e:
             print(f"[EmProps] Error saving to S3: {str(e)}")
-            return ("",)
+            return {}

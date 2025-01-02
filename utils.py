@@ -1,18 +1,4 @@
 import base64
-import subprocess
-
-def get_shell_env_var(var_name):
-    """Get environment variable value directly from shell"""
-    try:
-        result = subprocess.run(['echo', f'${var_name}'], 
-                              shell=True, 
-                              capture_output=True, 
-                              text=True)
-        value = result.stdout.strip()
-        return value if value and not value.startswith('$') else None
-    except Exception as e:
-        print(f"[EmProps] Error reading shell env var: {str(e)}")
-        return None
 
 def unescape_env_value(encoded_value):
     """

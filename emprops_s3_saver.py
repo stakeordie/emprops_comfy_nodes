@@ -44,6 +44,8 @@ class EmProps_S3_Saver:
     RETURN_NAMES = ("s3_url",)
     FUNCTION = "save_to_s3"
     CATEGORY = "EmProps"
+    OUTPUT_NODE = True
+    DESCRIPTION = "Saves the input images to S3 with configurable bucket and prefix."
 
     def save_to_s3(self, images, prefix, filename, bucket, prompt=None, extra_pnginfo=None):
         """Save images to S3 with the specified prefix and filename"""

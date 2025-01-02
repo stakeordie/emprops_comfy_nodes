@@ -121,8 +121,9 @@ class EmProps_S3_Saver:
                 # Get full output path for local save
                 full_output_folder, filename_with_path, counter, subfolder, _ = folder_paths.get_save_image_path(current_filename, self.output_dir, images[0].shape[1], images[0].shape[0])
                 
-                # Save locally first
-                local_filename = f"{filename_with_path}_{counter:05}_.png"
+                # Remove any existing .png extension and add new one
+                base_filename = filename_with_path.rsplit('.png', 1)[0]
+                local_filename = f"{base_filename}_{counter:05}.png"
                 local_path = os.path.join(full_output_folder, local_filename)
 
                 print(f"[EmProps] Saving to local file: {local_path}")
@@ -148,8 +149,11 @@ class EmProps_S3_Saver:
                 results.append({
                     "filename": local_filename,
                     "subfolder": subfolder,
-                    "type": self.type,
-                    "s3_url": f"s3://{bucket}/{s3_key}"
+                    "type": "output",  # Use standard output type for UI display
+                    "s3": {  # Put S3-specific info in separate field
+                        "url": f"s3://{bucket}/{s3_key}",
+                        "type": self.type
+                    }
                 })
                 
                 # print results object

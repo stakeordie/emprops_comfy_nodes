@@ -21,6 +21,7 @@ class EmProps_S3_Saver:
         self.aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
         self.aws_region = os.getenv('AWS_DEFAULT_REGION')
 
+        print("[EmProps] Loading AWS credentials from environment...", self.aws_access_key, self.aws_secret_key, self.aws_region)
         # If not found, try .env.local
         if not self.aws_access_key or not self.aws_secret_key:
             current_dir = os.path.dirname(os.path.abspath(__file__))

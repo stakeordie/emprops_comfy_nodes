@@ -29,10 +29,14 @@ class EmProps_S3_Saver:
             print("[EmProps] Loading .env.local from: " + env_path)
             if os.path.exists(env_path):
                 load_dotenv(env_path)
-                # Get and unescape AWS credentials from .env.local
-                self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
+                print("[EmProps] Get and unescape AWS credentials from .env.local")
+                self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY', ''))
+                if not self.aws_secret_key:
+                    self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
+                    print("[EmProps] AWS_SECRET_ACCESS_KEY_ENCODED not found in .env.local, trying AWS_SECRET_ACCESS_KEY")
                 self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
                 self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
+                print("[EmProps] Loading AWS credentials from environment...", self.aws_access_key, self.aws_secret_key, self.aws_region)
 
         # Set default region if still not set
         self.aws_region = self.aws_region or 'us-east-1'

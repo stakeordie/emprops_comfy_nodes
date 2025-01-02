@@ -22,7 +22,17 @@ class EmProps_S3_Saver:
         print(f"[EmProps] Debug - Secret Key found: {'Yes' if self.aws_secret_key else 'No'}")
         print(f"[EmProps] Debug - Region found: {self.aws_region or 'No'}")
 
-        # If not found, try .env.local
+        # If not found, try getting from shell
+        if not self.aws_access_key or not self.aws_secret_key:
+            self.aws_access_key = get_shell_env_var('AWS_ACCESS_KEY_ID')
+            self.aws_secret_key = get_shell_env_var('AWS_SECRET_ACCESS_KEY')
+            self.aws_region = get_shell_env_var('AWS_DEFAULT_REGION')
+
+            print(f"[EmProps] Debug - Shell Access Key found: {'Yes' if self.aws_access_key else 'No'}")
+            print(f"[EmProps] Debug - Shell Secret Key found: {'Yes' if self.aws_secret_key else 'No'}")
+            print(f"[EmProps] Debug - Shell Region found: {self.aws_region or 'No'}")
+
+        # If still not found, try .env.local
         if not self.aws_access_key or not self.aws_secret_key:
             current_dir = os.path.dirname(os.path.abspath(__file__))
             env_path = os.path.join(current_dir, '.env.local')

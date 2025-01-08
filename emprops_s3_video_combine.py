@@ -54,8 +54,8 @@ class EmProps_S3_Video_Combine(VideoCombine):
         parent_types = super().INPUT_TYPES()
         # Add our S3 specific parameter
         parent_types["required"]["s3_prefix"] = ("STRING", {"default": "videos/"})
-        # Update format options to include our specific formats
-        parent_types["required"]["format"] = (["video/mp4", "video/webm", "image/gif"] + parent_types["required"]["format"][0],)
+        # Use parent's format handling
+        parent_types["required"]["format"] = parent_types["required"]["format"]
         return parent_types
 
     RETURN_TYPES = ("STRING", "VHS_FILENAMES")

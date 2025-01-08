@@ -3,9 +3,9 @@ import boto3
 import folder_paths
 from dotenv import load_dotenv
 from .utils import unescape_env_value
-from nodes import VideoCombine
+from .deps.ComfyUI-VideoHelperSuite.videohelpersuite.nodes import VHS_VideoCombine
 
-class EmProps_S3_Video_Combine(VideoCombine):
+class EmProps_S3_Video_Combine(VHS_VideoCombine):
     """
     Node for combining videos and uploading to S3 with dynamic prefix support
     """

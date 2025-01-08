@@ -1,9 +1,16 @@
 import os
+import sys
 import boto3
 import folder_paths
 from dotenv import load_dotenv
 from .utils import unescape_env_value
-from .deps.ComfyUI-VideoHelperSuite.videohelpersuite.nodes import VHS_VideoCombine
+
+# Add the VideoHelperSuite path to sys.path
+vhs_path = os.path.join(os.path.dirname(__file__), 'deps', 'ComfyUI-VideoHelperSuite')
+if vhs_path not in sys.path:
+    sys.path.append(vhs_path)
+
+from videohelpersuite.nodes import VHS_VideoCombine
 
 class EmProps_S3_Video_Combine(VHS_VideoCombine):
     """

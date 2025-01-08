@@ -51,27 +51,39 @@ class EmProps_S3_Video_Combine(VideoCombine):
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "images": ("IMAGE",),
-                "frame_rate": ("INT", {"default": 8, "min": 1, "max": 60}),
-                "loop_count": ("INT", {"default": 0, "min": 0, "max": 100}),
-                "filename_prefix": ("STRING", {"default": ""}),
-                "s3_prefix": ("STRING", {"default": "videos/"}),
-                "format": (["video/mp4", "video/webm", "image/gif"],),
-                "audio": ("AUDIO", {"default": None})
-            },
-        }
+        parent_types = super().INPUT_TYPES()
+        # Add our S3 specific parameter
+        parent_types["required"]["s3_prefix"] = ("STRING", {"default": "videos/"})
+        # Update format options to include our specific formats
+        parent_types["required"]["format"] = (["video/mp4", "video/webm", "image/gif"] + parent_types["required"]["format"][0],)
+        return parent_types
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("url",)
+    RETURN_TYPES = ("STRING", "VHS_FILENAMES")
+    RETURN_NAMES = ("url", "filenames")
     FUNCTION = "combine_and_upload"
     OUTPUT_NODE = True
     CATEGORY = "EmProps"
 
-    def combine_and_upload(self, images, frame_rate, loop_count, filename_prefix, s3_prefix, format="video/mp4", audio=None):
+    def combine_and_upload(self, images, frame_rate, loop_count, filename_prefix, s3_prefix, format="video/mp4", pingpong=False, save_output=True, audio=None, prompt=None, extra_pnginfo=None, unique_id=None, manual_format_widgets=None, meta_batch=None, vae=None, **kwargs):
         # First combine the video using parent class
-        video_path = super().combine(images, frame_rate, loop_count, filename_prefix, format, audio)[0]
+        filenames = super().combine_video(
+            images=images,
+            frame_rate=frame_rate,
+            loop_count=loop_count,
+            filename_prefix=filename_prefix,
+            format=format,
+            pingpong=pingpong,
+            save_output=save_output,
+            audio=audio,
+            prompt=prompt,
+            extra_pnginfo=extra_pnginfo,
+            unique_id=unique_id,
+            manual_format_widgets=manual_format_widgets,
+            meta_batch=meta_batch,
+            vae=vae,
+            **kwargs
+        )
+        video_path = filenames[0]  # Get the first filename from the VHS_FILENAMES tuple
         
         try:
             # Initialize S3 client
@@ -105,7 +117,7 @@ class EmProps_S3_Video_Combine(VideoCombine):
             url = f"https://{self.s3_bucket}.s3.amazonaws.com/{s3_key}"
             print(f"[EmProps] Video uploaded successfully to: {url}")
             
-            return (url,)
+            return (url, filenames)
             
         except Exception as e:
             print(f"[EmProps] Error uploading to S3: {str(e)}")

@@ -2,17 +2,18 @@ import os
 import sys
 import boto3
 import folder_paths
+import importlib.util
 from dotenv import load_dotenv
 from .utils import unescape_env_value
 
-# Add the VideoHelperSuite path to sys.path
-vhs_path = os.path.join(os.path.dirname(__file__), 'deps', 'ComfyUI-VideoHelperSuite')
-if vhs_path not in sys.path:
-    sys.path.append(vhs_path)
+# Import VideoCombine from VideoHelperSuite
+vhs_path = os.path.join(os.path.dirname(__file__), 'deps', 'ComfyUI-VideoHelperSuite', 'videohelpersuite', 'nodes.py')
+spec = importlib.util.spec_from_file_location("vhs_nodes", vhs_path)
+vhs_nodes = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(vhs_nodes)
+VideoCombine = vhs_nodes.VideoCombine
 
-from videohelpersuite.nodes import VHS_VideoCombine
-
-class EmProps_S3_Video_Combine(VHS_VideoCombine):
+class EmProps_S3_Video_Combine(VideoCombine):
     """
     Node for combining videos and uploading to S3 with dynamic prefix support
     """

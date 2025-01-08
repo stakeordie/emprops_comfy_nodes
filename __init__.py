@@ -1,10 +1,17 @@
 import os
+import sys
 import folder_paths
 from .emprops_lora_loader import EmProps_Lora_Loader
 from .emprops_s3_video_combine import EmProps_S3_Video_Combine
 
+print("[EmProps] Starting EmProps initialization")
+print(f"[EmProps] Python path: {sys.path}")
+print(f"[EmProps] Current working directory: {os.getcwd()}")
+print(f"[EmProps] Module directory: {os.path.dirname(os.path.abspath(__file__))}")
+
 # Import VHS package first to ensure initialization
 print("[EmProps] Importing VHS package")
+print(f"[EmProps] VHS package location: {os.path.abspath(os.path.join(os.path.dirname(__file__), 'deps', 'VHS_VideoHelperSuite'))}")
 from .deps import VHS_VideoHelperSuite
 print("[EmProps] Importing VHS nodes")
 from .deps.VHS_VideoHelperSuite.videohelpersuite import nodes as vhs_nodes
@@ -29,6 +36,7 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "EmProps_Lora_Loader": "EmProps Lora Loader",
     "EmProps_S3_Video_Combine": "EmProps S3 Video Combine",
+    **vhs_nodes.NODE_DISPLAY_NAME_MAPPINGS
 }
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']

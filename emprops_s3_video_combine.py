@@ -3,7 +3,7 @@ import boto3
 import folder_paths
 from dotenv import load_dotenv
 from .utils import unescape_env_value
-from .deps.ComfyUI-VideoHelperSuite.videohelpersuite.nodes import VideoCombine
+from .deps.VHS_VideoHelperSuite.videohelpersuite.nodes import VideoCombine
 
 class EmProps_S3_Video_Combine(VideoCombine):
     """

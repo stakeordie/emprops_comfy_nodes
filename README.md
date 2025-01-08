@@ -2,6 +2,15 @@
 
 Custom nodes for ComfyUI developed by EmProps.
 
+## Prerequisites
+
+This package requires [ComfyUI-VideoHelperSuite](https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite) to be installed in your ComfyUI environment. Install it first:
+
+```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
+```
+
 ## Installation
 
 ### Option 1: Clone with Submodules (Recommended)
@@ -26,7 +35,9 @@ pip install -r requirements.txt
 
 ## Dependencies
 
-This project uses VideoHelperSuite as a submodule. The submodule is automatically handled during installation if you follow the instructions above.
+This project uses VideoHelperSuite in two ways:
+1. As a required ComfyUI custom node (install separately as shown in Prerequisites)
+2. As a submodule for internal code reuse (handled automatically during installation)
 
 ### Updating the Repository
 

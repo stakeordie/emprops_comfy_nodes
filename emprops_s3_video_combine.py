@@ -3,9 +3,18 @@ import boto3
 import folder_paths
 from dotenv import load_dotenv
 from .utils import unescape_env_value
-from .deps.VHS_VideoHelperSuite.videohelpersuite.nodes import VideoCombine
 
-class EmProps_S3_Video_Combine(VideoCombine):
+print("[EmProps] S3VideoCombine: Starting imports")
+try:
+    print("[EmProps] S3VideoCombine: Importing VHS nodes module")
+    from .deps.VHS_VideoHelperSuite.videohelpersuite import nodes as vhs_nodes
+    print("[EmProps] S3VideoCombine: VHS nodes imported successfully")
+    print(f"[EmProps] S3VideoCombine: VHS module path: {vhs_nodes.__file__}")
+except Exception as e:
+    print(f"[EmProps] S3VideoCombine: Error importing VHS nodes: {str(e)}")
+    raise
+
+class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
     """
     Node for combining videos and uploading to S3 with dynamic prefix support
     """

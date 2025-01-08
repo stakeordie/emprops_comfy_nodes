@@ -65,6 +65,10 @@ class EmProps_S3_Video_Combine(VideoCombine):
     CATEGORY = "EmProps"
 
     def combine_and_upload(self, images, frame_rate, loop_count, filename_prefix, s3_prefix, format="video/mp4", pingpong=False, save_output=True, audio=None, prompt=None, extra_pnginfo=None, unique_id=None, manual_format_widgets=None, meta_batch=None, vae=None, **kwargs):
+        print("[EmProps] S3VideoCombine: Starting combine_and_upload")
+        print(f"[EmProps] S3VideoCombine: Using format {format}")
+        print(f"[EmProps] S3VideoCombine: Available formats in folder_paths: {folder_paths.folder_names_and_paths.get('VHS_video_formats', 'Not found!')}")
+        
         # First combine the video using parent class
         filenames = super().combine_video(
             images=images,

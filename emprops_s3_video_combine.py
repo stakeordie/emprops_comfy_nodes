@@ -7,9 +7,13 @@ from .utils import unescape_env_value
 print("[EmProps] S3VideoCombine: Starting imports")
 try:
     print("[EmProps] S3VideoCombine: Importing VHS nodes module")
+    import importlib
     from .deps.VHS_VideoHelperSuite.videohelpersuite import nodes as vhs_nodes
+    # Force reload the module to ensure initialization runs
+    importlib.reload(vhs_nodes)
     print("[EmProps] S3VideoCombine: VHS nodes imported successfully")
     print(f"[EmProps] S3VideoCombine: VHS module path: {vhs_nodes.__file__}")
+    print(f"[EmProps] S3VideoCombine: Available formats right after import: {folder_paths.get_filename_list('VHS_video_formats')}")
 except Exception as e:
     print(f"[EmProps] S3VideoCombine: Error importing VHS nodes: {str(e)}")
     raise
@@ -76,7 +80,20 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
     def combine_and_upload(self, images, frame_rate, loop_count, filename_prefix, s3_prefix, format="video/mp4", pingpong=False, save_output=True, audio=None, prompt=None, extra_pnginfo=None, unique_id=None, manual_format_widgets=None, meta_batch=None, vae=None, **kwargs):
         print("[EmProps] S3VideoCombine: Starting combine_and_upload")
         print(f"[EmProps] S3VideoCombine: Using format {format}")
-        print(f"[EmProps] S3VideoCombine: Available formats in folder_paths: {folder_paths.folder_names_and_paths.get('VHS_video_formats', 'Not found!')}")
+        print(f"[EmProps] S3VideoCombine: kwargs: {kwargs}")
+        
+        # Get the format extension (strip off 'video/')
+        format_ext = format.split('/')[-1] if '/' in format else format
+        print(f"[EmProps] S3VideoCombine: Format extension: {format_ext}")
+        
+        # Check if format exists
+        format_path = folder_paths.get_full_path("VHS_video_formats", format_ext + ".json")
+        print(f"[EmProps] S3VideoCombine: Format path: {format_path}")
+        print(f"[EmProps] S3VideoCombine: Available formats: {folder_paths.get_filename_list('VHS_video_formats')}")
+        
+        if format_path is None:
+            print(f"[EmProps] S3VideoCombine: WARNING - Format not found: {format_ext}")
+            print(f"[EmProps] S3VideoCombine: Current folder_paths: {folder_paths.folder_names_and_paths}")
         
         # First combine the video using parent class
         filenames = super().combine_video(

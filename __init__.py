@@ -3,7 +3,10 @@ import folder_paths
 from .emprops_lora_loader import EmProps_Lora_Loader
 from .emprops_s3_video_combine import EmProps_S3_Video_Combine
 
-# Import VHS module first to ensure initialization
+# Import VHS package first to ensure initialization
+print("[EmProps] Importing VHS package")
+from .deps import VHS_VideoHelperSuite
+print("[EmProps] Importing VHS nodes")
 from .deps.VHS_VideoHelperSuite.videohelpersuite import nodes as vhs_nodes
 
 print("[EmProps] Loading EmProps nodes")

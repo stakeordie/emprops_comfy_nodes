@@ -3,13 +3,13 @@ import folder_paths
 from .emprops_lora_loader import EmProps_Lora_Loader
 from .emprops_s3_video_combine import EmProps_S3_Video_Combine
 
-# Import VHS nodes
-from .deps.VHS_VideoHelperSuite.videohelpersuite.nodes import NODE_CLASS_MAPPINGS as VHS_NODE_CLASS_MAPPINGS
+# Import VHS module first to ensure initialization
+from .deps.VHS_VideoHelperSuite.videohelpersuite import nodes as vhs_nodes
 
 print("[EmProps] Loading EmProps nodes")
 print(f"[EmProps] Current directory: {os.path.dirname(os.path.abspath(__file__))}")
 
-# Register video formats directory from VideoHelperSuite
+# Register VHS formats path
 vhs_formats_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deps", "VHS_VideoHelperSuite", "video_formats")
 if os.path.exists(vhs_formats_path):
     print(f"[EmProps] Found VHS formats at: {vhs_formats_path}")
@@ -20,7 +20,7 @@ if os.path.exists(vhs_formats_path):
 NODE_CLASS_MAPPINGS = {
     "EmProps_Lora_Loader": EmProps_Lora_Loader,
     "EmProps_S3_Video_Combine": EmProps_S3_Video_Combine,
-    **VHS_NODE_CLASS_MAPPINGS
+    **vhs_nodes.NODE_CLASS_MAPPINGS
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {

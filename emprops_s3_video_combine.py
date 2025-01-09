@@ -64,12 +64,19 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
 
     @classmethod
     def INPUT_TYPES(cls):
+        print("[EmProps] S3VideoCombine: Starting INPUT_TYPES")
         parent_types = super().INPUT_TYPES()
+        print(f"[EmProps] S3VideoCombine: Parent types: {parent_types}")
+        
         # Add our S3 specific parameter
         parent_types["required"]["s3_prefix"] = ("STRING", {"default": "videos/"})
+        
         # Use get_video_formats() for proper format handling
         formats = vhs_nodes.get_video_formats()
+        print(f"[EmProps] S3VideoCombine: Available formats: {formats}")
         parent_types["required"]["format"] = (formats, {"default": "video/h264-mp4"})
+        print(f"[EmProps] S3VideoCombine: Final format types: {parent_types['required']['format']}")
+        
         return parent_types
 
     RETURN_TYPES = ("STRING", "VHS_FILENAMES")
@@ -78,9 +85,11 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
     OUTPUT_NODE = True
     CATEGORY = "EmProps"
 
-    def combine_and_upload(self, images, frame_rate, loop_count, filename_prefix, s3_prefix, format="video/mp4", pingpong=False, save_output=True, audio=None, prompt=None, extra_pnginfo=None, unique_id=None, manual_format_widgets=None, meta_batch=None, vae=None, **kwargs):
+    def combine_and_upload(self, images, frame_rate, loop_count, filename_prefix, s3_prefix, format="video/h264-mp4", pingpong=False, save_output=True, audio=None, prompt=None, extra_pnginfo=None, unique_id=None, manual_format_widgets=None, meta_batch=None, vae=None, **kwargs):
         print("[EmProps] S3VideoCombine: Starting combine_and_upload")
         print(f"[EmProps] S3VideoCombine: Using format {format}")
+        print(f"[EmProps] S3VideoCombine: Format type: {type(format)}")
+        print(f"[EmProps] S3VideoCombine: Manual format widgets: {manual_format_widgets}")
         print(f"[EmProps] S3VideoCombine: kwargs: {kwargs}")
         
         # Get the format extension (strip off 'video/')

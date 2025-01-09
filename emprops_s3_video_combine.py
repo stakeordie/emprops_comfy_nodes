@@ -52,15 +52,8 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
     @classmethod
     def INPUT_TYPES(cls):
         parent_types = super().INPUT_TYPES()
-        format_field = parent_types['required']['format']
-        print(f"[EmProps] Parent format is tuple? {isinstance(format_field, tuple)}")
-        print(f"[EmProps] Parent format type hierarchy: {type(format_field).__mro__}")
-        print(f"[EmProps] Parent format value: {format_field}")
-        parent_types["required"].update({"s3_prefix": ("STRING", {"default": "videos/"})})
-        format_field = parent_types['required']['format']
-        print(f"[EmProps] Final format is tuple? {isinstance(format_field, tuple)}")
-        print(f"[EmProps] Final format type hierarchy: {type(format_field).__mro__}")
-        print(f"[EmProps] Final format value: {format_field}")
+        print(f"[EmProps] Parent format is tuple? {isinstance(parent_types['required']['format'], tuple)}")
+        print(f"[EmProps] Parent format value: {parent_types['required']['format']}")
         return parent_types
 
     RETURN_TYPES = ("STRING", "VHS_FILENAMES")

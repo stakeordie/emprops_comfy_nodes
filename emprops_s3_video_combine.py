@@ -66,16 +66,20 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
     def INPUT_TYPES(cls):
         print("[EmProps] S3VideoCombine: Starting INPUT_TYPES")
         parent_types = super().INPUT_TYPES()
-        print(f"[EmProps] S3VideoCombine: Parent types: {parent_types}")
         
         # Add our S3 specific parameter
         parent_types["required"]["s3_prefix"] = ("STRING", {"default": "videos/"})
         
-        # Use get_video_formats() for proper format handling
-        formats = vhs_nodes.get_video_formats()
-        print(f"[EmProps] S3VideoCombine: Available formats: {formats}")
+        # Get only video formats
+        formats = [f for f in vhs_nodes.get_video_formats() if f.startswith('video/')]
+        print(f"[EmProps] S3VideoCombine: Available video formats: {formats}")
+        
+        if not formats:
+            print("[EmProps] S3VideoCombine: WARNING - No video formats found!")
+            formats = ["video/h264-mp4"]  # Fallback to default
+            
         parent_types["required"]["format"] = (formats, {"default": "video/h264-mp4"})
-        print(f"[EmProps] S3VideoCombine: Final format types: {parent_types['required']['format']}")
+        print(f"[EmProps] S3VideoCombine: Final format config: {parent_types['required']['format']}")
         
         return parent_types
 

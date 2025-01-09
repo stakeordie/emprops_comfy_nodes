@@ -70,8 +70,14 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
         # Add our S3 specific parameter
         parent_types["required"]["s3_prefix"] = ("STRING", {"default": "videos/"})
         
-        # Get only video formats
-        formats = [f for f in vhs_nodes.get_video_formats() if f.startswith('video/')]
+        # Get only video formats, handling both simple strings and complex format entries
+        formats = []
+        for fmt in vhs_nodes.get_video_formats():
+            if isinstance(fmt, str) and fmt.startswith('video/'):
+                formats.append(fmt)
+            elif isinstance(fmt, list) and fmt[0].startswith('video/'):
+                formats.append(fmt)
+                
         print(f"[EmProps] S3VideoCombine: Available video formats: {formats}")
         
         if not formats:

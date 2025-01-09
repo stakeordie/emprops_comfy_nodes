@@ -3,11 +3,7 @@ import boto3
 import folder_paths
 from dotenv import load_dotenv
 from .utils import unescape_env_value
-from .deps.VHS_VideoHelperSuite.videohelpersuite.nodes import get_video_formats
-
-import importlib
 from .deps.VHS_VideoHelperSuite.videohelpersuite import nodes as vhs_nodes
-importlib.reload(vhs_nodes)
 
 class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
     """
@@ -55,12 +51,16 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
 
     @classmethod
     def INPUT_TYPES(cls):
-        ffmpeg_formats = get_video_formats()
         parent_types = super().INPUT_TYPES()
-        print(f"[EmProps] Parent INPUT_TYPES: {parent_types}")
-        parent_types["required"]["format"] = (["image/gif", "image/webp"] + ffmpeg_formats,)
+        format_field = parent_types['required']['format']
+        print(f"[EmProps] Parent format is tuple? {isinstance(format_field, tuple)}")
+        print(f"[EmProps] Parent format type hierarchy: {type(format_field).__mro__}")
+        print(f"[EmProps] Parent format value: {format_field}")
         parent_types["required"].update({"s3_prefix": ("STRING", {"default": "videos/"})})
-        print(f"[EmProps] Final INPUT_TYPES: {parent_types}")
+        format_field = parent_types['required']['format']
+        print(f"[EmProps] Final format is tuple? {isinstance(format_field, tuple)}")
+        print(f"[EmProps] Final format type hierarchy: {type(format_field).__mro__}")
+        print(f"[EmProps] Final format value: {format_field}")
         return parent_types
 
     RETURN_TYPES = ("STRING", "VHS_FILENAMES")

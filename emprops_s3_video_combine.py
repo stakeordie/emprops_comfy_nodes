@@ -67,8 +67,9 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
         parent_types = super().INPUT_TYPES()
         # Add our S3 specific parameter
         parent_types["required"]["s3_prefix"] = ("STRING", {"default": "videos/"})
-        # Use parent's format handling
-        parent_types["required"]["format"] = parent_types["required"]["format"]
+        # Use get_video_formats() for proper format handling
+        formats = vhs_nodes.get_video_formats()
+        parent_types["required"]["format"] = (formats, {"default": "video/h264-mp4"})
         return parent_types
 
     RETURN_TYPES = ("STRING", "VHS_FILENAMES")

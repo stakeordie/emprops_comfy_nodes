@@ -55,9 +55,12 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
 
     @classmethod
     def INPUT_TYPES(cls):
+        ffmpeg_formats = get_video_formats()
         parent_types = super().INPUT_TYPES()
-        print(f"[EmProps] Available video formats: {get_video_formats()}")
+        print(f"[EmProps] Parent INPUT_TYPES: {parent_types}")
+        parent_types["required"]["format"] = (["image/gif", "image/webp"] + ffmpeg_formats,)
         parent_types["required"].update({"s3_prefix": ("STRING", {"default": "videos/"})})
+        print(f"[EmProps] Final INPUT_TYPES: {parent_types}")
         return parent_types
 
     RETURN_TYPES = ("STRING", "VHS_FILENAMES")

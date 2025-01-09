@@ -105,7 +105,18 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
             vae=vae,
             **kwargs
         )
-        video_path = filenames[0]  # Get the first filename from the VHS_FILENAMES tuple
+        print(f"[EmProps] Got filenames from parent: {filenames}")
+        print(f"[EmProps] Type of filenames: {type(filenames)}")
+        
+        # Get the first video path
+        if isinstance(filenames, (list, tuple)):
+            video_path = filenames[0]
+        elif isinstance(filenames, dict):
+            video_path = list(filenames.values())[0]
+        else:
+            raise ValueError(f"Unexpected filenames type: {type(filenames)}")
+            
+        print(f"[EmProps] Using video path: {video_path}")
         
         try:
             # Initialize S3 client

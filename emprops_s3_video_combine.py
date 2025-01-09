@@ -108,16 +108,19 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
         print(f"[EmProps] Got filenames from parent: {filenames}")
         print(f"[EmProps] Type of filenames: {type(filenames)}")
         
-        # Get the first video path
-        if isinstance(filenames, (list, tuple)):
-            video_path = filenames[0]
-        elif isinstance(filenames, dict):
-            video_path = list(filenames.values())[0]
-        else:
-            raise ValueError(f"Unexpected filenames type: {type(filenames)}")
-            
-        print(f"[EmProps] Using video path: {video_path}")
-        
+        # Extract video path from the complex return structure
+        try:
+            # Get the first gif's fullpath from the UI data
+            video_path = filenames['ui']['gifs'][0]['fullpath']
+            print(f"[EmProps] Using video path: {video_path}")
+        except (KeyError, IndexError) as e:
+            # Fallback to the result tuple if UI data isn't available
+            try:
+                video_path = filenames['result'][0][1][1]  # Get the second path (mp4) from result
+                print(f"[EmProps] Fallback: Using video path from result: {video_path}")
+            except (KeyError, IndexError) as e:
+                raise ValueError(f"Could not find video path in filenames structure: {filenames}") from e
+
         try:
             # Initialize S3 client
             s3_client = boto3.client(

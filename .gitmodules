@@ -1,3 +1,0 @@
-[submodule "deps/VHS_VideoHelperSuite"]
-	path = deps/VHS_VideoHelperSuite
-	url = https://github.com/stakeordie/ComfyUI-VideoHelperSuite.git

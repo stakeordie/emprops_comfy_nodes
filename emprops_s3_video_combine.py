@@ -51,10 +51,28 @@ class EmProps_S3_Video_Combine(vhs_nodes.VideoCombine):
 
     @classmethod
     def INPUT_TYPES(cls):
-        parent_types = super().INPUT_TYPES()
-        print(f"[EmProps] Parent format is tuple? {isinstance(parent_types['required']['format'], tuple)}")
-        print(f"[EmProps] Parent format value: {parent_types['required']['format']}")
-        return parent_types
+        return {
+            "required": {
+                "images": ("IMAGE",),
+                "frame_rate": ("FLOAT", {"default": 8, "min": 1, "step": 1}),
+                "loop_count": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1}),
+                "filename_prefix": ("STRING", {"default": "AnimateDiff"}),
+                "format": (["video/h264-mp4", "video/h265-mp4", "video/webm"],),
+                "pingpong": ("BOOLEAN", {"default": False}),
+                "save_output": ("BOOLEAN", {"default": True}),
+                "s3_prefix": ("STRING", {"default": "videos/"})
+            },
+            "optional": {
+                "audio": ("AUDIO",),
+                "meta_batch": ("VHS_BatchManager",),
+                "vae": ("VAE",)
+            },
+            "hidden": {
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+                "unique_id": "UNIQUE_ID"
+            }
+        }
 
     RETURN_TYPES = ("STRING", "VHS_FILENAMES")
     RETURN_NAMES = ("url", "filenames")

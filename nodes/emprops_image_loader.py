@@ -24,7 +24,6 @@ class EmpropsImageLoader:
     CATEGORY = "image"
     RETURN_TYPES = ("IMAGE", "MASK")
     FUNCTION = "load_image"
-    OUTPUT_NODE = True
 
     def load_image(self, **kwargs):
         if kwargs['source_type'] == 'upload':
@@ -83,15 +82,7 @@ class EmpropsImageLoader:
             output_image = output_images[0]
             output_mask = output_masks[0]
 
-        # Add preview info
-        results = []
-        results.append({
-            "filename": os.path.basename(image_path),
-            "subfolder": os.path.dirname(image_path),
-            "type": "input"
-        })
-
-        return (output_image, output_mask, {"images": results})
+        return (output_image, output_mask)
 
     @classmethod
     def IS_CHANGED(s, **kwargs):

@@ -49,30 +49,35 @@ def try_download_file(url, chunk_size=8192):
         chunk_size (int): Size of chunks to download
         
     Returns:
-        str: Path to downloaded file, or None if download failed
+        str: Path to downloaded file or None if download fails
     """
     try:
-        temp_dir = folder_paths.get_temp_directory()
-        os.makedirs(temp_dir, exist_ok=True)
+        # Setup headers to mimic a browser request
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.google.com/'
+        }
         
-        # Extract filename from URL or use a default
+        # Get the filename from the URL
         parsed_url = urllib.parse.urlparse(url)
         filename = os.path.basename(parsed_url.path)
         if not filename:
-            filename = 'downloaded_file'
+            filename = 'downloaded_image.jpg'
             
-        output_path = os.path.join(temp_dir, filename)
+        # Create temp directory if it doesn't exist
+        temp_dir = folder_paths.get_temp_directory()
+        os.makedirs(temp_dir, exist_ok=True)
         
-        # Download the file in chunks
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        
-        with open(output_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:
+        # Download the file
+        local_filename = os.path.join(temp_dir, filename)
+        with requests.get(url, stream=True, headers=headers) as r:
+            r.raise_for_status()
+            with open(local_filename, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=chunk_size):
                     f.write(chunk)
-                    
-        return output_path
+        return local_filename
     except Exception as e:
         print(f"[EmProps] Error downloading file: {str(e)}")
         return None

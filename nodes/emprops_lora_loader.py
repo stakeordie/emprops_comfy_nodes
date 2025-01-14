@@ -3,14 +3,10 @@ import requests
 import sys
 import time
 from tqdm import tqdm
-import boto3
 import folder_paths
 from nodes import LoraLoader
-from dotenv import load_dotenv  # Add this import
-
-def unescape_env_value(value):
-    """Unescape _SLASH_ in environment variables"""
-    return value.replace('_SLASH_', '/')
+from dotenv import load_dotenv
+from ..utils import unescape_env_value, S3Handler
 
 class EmProps_Lora_Loader:
     """
@@ -101,8 +97,7 @@ class EmProps_Lora_Loader:
             print(f"    TO: {local_path}")
             
             # Initialize S3 client with unescaped credentials
-            s3 = boto3.client(
-                's3',
+            s3 = S3Handler(
                 aws_access_key_id=self.aws_access_key,
                 aws_secret_access_key=self.aws_secret_key,
                 region_name=self.aws_region

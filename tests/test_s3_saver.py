@@ -2,12 +2,12 @@ import os
 import sys
 
 # Add the project root to Python path
-project_root = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 import torch
 import numpy as np
-from emprops_s3_saver import EmProps_S3_Saver
+from nodes.emprops_s3_saver import EmProps_S3_Saver
 
 def create_test_image(width=512, height=512):
     """Create a test tensor image similar to what ComfyUI would provide"""

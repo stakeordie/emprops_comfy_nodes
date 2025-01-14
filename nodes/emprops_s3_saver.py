@@ -23,7 +23,7 @@ class EmProps_S3_Saver:
 
         # If not found, try .env and .env.local files
         if not self.aws_access_key or not self.aws_secret_key:
-            current_dir = os.path.dirname(os.path.abspath(__file__))
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Go up one level to project root
             
             # Try .env first
             env_path = os.path.join(current_dir, '.env')

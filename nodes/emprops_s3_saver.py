@@ -136,7 +136,7 @@ class EmProps_S3_Saver:
                 full_output_folder, filename_with_path, counter, subfolder, _ = folder_paths.get_save_image_path(current_filename, self.output_dir, images[0].shape[1], images[0].shape[0])
                 
                 # Remove any existing .png extension and add new one
-                base_filename = filename_with_path.rsplit('.png', 1)[0]
+                base_filename = os.path.basename(filename_with_path.rsplit('.png', 1)[0])
                 local_filename = f"{base_filename}_{counter:05}.png"
                 local_path = os.path.join(full_output_folder, local_filename)
 

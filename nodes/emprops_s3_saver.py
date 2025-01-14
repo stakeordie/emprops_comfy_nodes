@@ -3,7 +3,7 @@ import boto3
 import folder_paths
 from dotenv import load_dotenv
 from ..utils import unescape_env_value, S3Handler
-from .image_save_helper import ImageSaveHelper
+from .helpers.image_save_helper import ImageSaveHelper
 
 class EmProps_S3_Saver:
     """

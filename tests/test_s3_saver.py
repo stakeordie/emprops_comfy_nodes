@@ -8,6 +8,7 @@ sys.path.insert(0, project_root)
 import torch
 import numpy as np
 from nodes.emprops_s3_saver import EmProps_S3_Saver
+from nodes.helpers.image_save_helper import ImageSaveHelper
 
 def create_test_image(width=512, height=512):
     """Create a test tensor image similar to what ComfyUI would provide"""

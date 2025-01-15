@@ -4,8 +4,7 @@ import torch
 import numpy as np
 from PIL import Image, ImageOps, ImageSequence
 import folder_paths
-from ..utils import try_download_file, is_url, S3Handler
-from ..utils.metadata import extract_metadata
+from ..utils import try_download_file, is_url, S3Handler, extract_metadata
 
 class EmpropsImageLoader:
     @classmethod

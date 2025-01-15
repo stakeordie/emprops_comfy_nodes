@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image, ImageOps, ImageSequence
 import folder_paths
 from ..utils import try_download_file, is_url, S3Handler
+from ..utils.metadata import extract_metadata
 
 class EmpropsImageLoader:
     @classmethod
@@ -22,7 +23,8 @@ class EmpropsImageLoader:
         }
 
     CATEGORY = "image"
-    RETURN_TYPES = ("IMAGE", "MASK")
+    RETURN_TYPES = ("IMAGE", "MASK", "JSON", "METADATA_RAW")
+    RETURN_NAMES = ("image", "mask", "prompt", "Metadata RAW")
     FUNCTION = "load_image"
 
     def load_image(self, **kwargs):
@@ -50,8 +52,14 @@ class EmpropsImageLoader:
                 raise Exception(f"Failed to download image from S3: {error}")
 
         print(f"[EmProps] Opening image: {image_path}", flush=True)
+
+
         img = Image.open(image_path)
         img = ImageOps.exif_transpose(img)
+
+        #metadata start
+        prompt, metadata = extract_metadata(img)
+        #metadata end
 
         output_images = []
         output_masks = []
@@ -90,6 +98,7 @@ class EmpropsImageLoader:
             output_masks.append(mask.unsqueeze(0))
 
         if len(output_images) > 1 and img.format not in excluded_formats:
+            print(f"[EmProps] Note: Using metadata from first frame for all {len(output_images)} frames", flush=True)
             print(f"[EmProps] Combining {len(output_images)} frames", flush=True)
             output_image = torch.cat(output_images, dim=0)
             output_mask = torch.cat(output_masks, dim=0)
@@ -99,7 +108,7 @@ class EmpropsImageLoader:
             output_mask = output_masks[0]
 
         print("[EmProps] Image loading complete", flush=True)
-        return (output_image, output_mask)
+        return (output_image, output_mask, prompt, metadata)
 
     @classmethod
     def IS_CHANGED(s, **kwargs):

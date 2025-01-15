@@ -120,62 +120,57 @@ class EmProps_S3_Saver:
             if prefix.startswith('/'):
                 prefix = prefix[1:]
             
-            # Process images using the helper
-            processed_images = self.image_helper.process_images(images, prompt, extra_pnginfo)
+            # Get the file extension and format from filename
+            ext = os.path.splitext(filename)[1].lower()
+            format_map = {
+                '.jpg': ('JPEG', 'image/jpeg'),
+                '.jpeg': ('JPEG', 'image/jpeg'),
+                '.png': ('PNG', 'image/png'),
+                '.gif': ('GIF', 'image/gif'),
+                '.webp': ('WEBP', 'image/webp'),
+                '.tiff': ('TIFF', 'image/tiff'),
+                '.bmp': ('BMP', 'image/bmp')
+            }
+            format_info = format_map.get(ext, ('PNG', 'image/png'))
             
-            results = []
-            for idx, (img_bytes, metadata) in enumerate(processed_images):
-                # Handle multiple images by adding index to filename
-                if len(processed_images) > 1:
+            # Process images with format and mime type
+            processed = self.image_helper.process_images(
+                images, 
+                prompt=prompt, 
+                extra_pnginfo=extra_pnginfo,
+                format=format_info[0],
+                mime_type=format_info[1]
+            )
+            
+            saved = []
+            for idx, (image_bytes, metadata, mime_type) in enumerate(processed):
+                # Generate unique filename for each image
+                if len(processed) > 1:
                     base, ext = os.path.splitext(filename)
                     current_filename = f"{base}_{idx}{ext}"
                 else:
                     current_filename = filename
                 
-                # Get full output path for local save
-                full_output_folder, filename_with_path, counter, subfolder, _ = folder_paths.get_save_image_path(current_filename, self.output_dir, images[0].shape[1], images[0].shape[0])
+                s3_key = prefix + current_filename
+                print(f"[EmProps] Uploading to S3: {bucket}/{s3_key}", flush=True)
                 
-                # Remove any existing .png extension and add new one
-                base_filename = os.path.basename(filename_with_path.rsplit('.png', 1)[0])
-                local_filename = f"{base_filename}_{counter:05}.png"
-                local_path = os.path.join(full_output_folder, local_filename)
-
-                print(f"[EmProps] Saving to local file: {local_path}")
+                # Upload to S3 with content type
+                s3_client.upload_fileobj(
+                    image_bytes, 
+                    bucket, 
+                    s3_key,
+                    ExtraArgs={'ContentType': mime_type}
+                )
                 
-                # Save to local file
-                with open(local_path, 'wb') as f:
-                    img_bytes.seek(0)
-                    f.write(img_bytes.getvalue())
-                
-                # Construct the full S3 key
-                s3_key = f"{prefix}{current_filename}"
-                
-                # Upload to S3
-                img_bytes.seek(0)
-                s3_client.upload_fileobj(img_bytes, bucket, s3_key)
-                
-                # Verify the upload
-                print(f"[EmProps] Verifying S3 upload for {s3_key}...")
+                # Verify upload
                 if self.verify_s3_upload(s3_client, bucket, s3_key):
-                    print(f"[EmProps] Successfully verified S3 upload: s3://{bucket}/{s3_key}")
-                
-                # Create result entry for UI
-                results.append({
-                    "filename": local_filename,
-                    "subfolder": subfolder,
-                    "type": "output",  # Use standard output type for UI display
-                    "s3": {  # Put S3-specific info in separate field
-                        "url": f"s3://{bucket}/{s3_key}",
-                        "type": self.type
-                    }
-                })
-                
-                # print results object
-                print("[EmProps] Results:", results)
+                    saved.append(current_filename)
+                    print(f"[EmProps] Successfully uploaded and verified: {bucket}/{s3_key}", flush=True)
+                else:
+                    print(f"[EmProps] Failed to verify upload: {bucket}/{s3_key}", flush=True)
             
-            # Return both UI images and S3 URLs
-            return {"ui": {"images": results}}
+            return self.image_helper.format_ui_response(saved, prefix, self.type)
             
         except Exception as e:
-            print(f"[EmProps] Error saving to S3: {str(e)}")
-            return {}
+            print(f"[EmProps] Error saving to S3: {str(e)}", flush=True)
+            raise e

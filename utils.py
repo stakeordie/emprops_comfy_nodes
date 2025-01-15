@@ -195,8 +195,27 @@ class S3Handler:
             if s3_prefix:
                 s3_key = f"{s3_prefix.rstrip('/')}/{s3_key}"
             
-            # Upload file
-            self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
+            # Determine content type from file extension
+            ext = os.path.splitext(s3_key)[1].lower()
+            format_map = {
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.webp': 'image/webp',
+                '.tiff': 'image/tiff',
+                '.bmp': 'image/bmp'
+            }
+            content_type = format_map.get(ext, 'application/octet-stream')
+            print(f"[EmProps] Uploading with content type: {content_type}", flush=True)
+            
+            # Upload file with content type
+            self.s3_client.upload_file(
+                file_path, 
+                self.bucket_name, 
+                s3_key,
+                ExtraArgs={'ContentType': content_type}
+            )
             
             # Verify upload
             if not self.verify_s3_upload(self.bucket_name, s3_key):

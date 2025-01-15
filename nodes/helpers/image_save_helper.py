@@ -20,7 +20,7 @@ class ImageSaveHelper:
         """
         self.compress_level = compress_level
 
-    def process_images(self, images, prompt=None, extra_pnginfo=None):
+    def process_images(self, images, prompt=None, extra_pnginfo=None, format="PNG", mime_type="image/png"):
         """
         Process a batch of images and convert them to bytes with metadata.
         
@@ -28,9 +28,11 @@ class ImageSaveHelper:
             images: List of tensor images from ComfyUI
             prompt: Optional prompt information to include in metadata
             extra_pnginfo: Optional additional metadata
+            format: Image format to save as (default: "PNG")
+            mime_type: MIME type for the image (default: "image/png")
             
         Returns:
-            List of tuples (bytes_io, metadata) for each processed image
+            List of tuples (bytes_io, metadata, mime_type) for each processed image
         """
         results = []
         
@@ -42,13 +44,23 @@ class ImageSaveHelper:
             
             # Create metadata if enabled
             metadata = self._create_metadata(prompt, extra_pnginfo)
+            if mime_type:
+                metadata.add_text("mime_type", mime_type)
             
             # Convert to bytes
             img_bytes = io.BytesIO()
-            img.save(img_bytes, format='PNG', pnginfo=metadata, compress_level=self.compress_level)
+            save_kwargs = {"format": format}
+            if format.upper() == "PNG":
+                save_kwargs["compress_level"] = self.compress_level
+                save_kwargs["pnginfo"] = metadata
+            elif format.upper() in ["JPEG", "JPG"]:
+                save_kwargs["quality"] = 95
+                save_kwargs["exif"] = metadata
+            
+            img.save(img_bytes, **save_kwargs)
             img_bytes.seek(0)
             
-            results.append((img_bytes, metadata))
+            results.append((img_bytes, metadata, mime_type))
         
         return results
     

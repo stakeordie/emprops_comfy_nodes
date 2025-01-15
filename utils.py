@@ -261,6 +261,16 @@ class S3Handler:
             print(f"Error listing S3 files: {str(e)}")
             return []
 
+# Initialize mimetypes with common image formats
+mimetypes.init()
+mimetypes.add_type('image/jpeg', '.jpg')
+mimetypes.add_type('image/jpeg', '.jpeg')
+mimetypes.add_type('image/png', '.png')
+mimetypes.add_type('image/gif', '.gif')
+mimetypes.add_type('image/webp', '.webp')
+mimetypes.add_type('image/tiff', '.tiff')
+mimetypes.add_type('image/bmp', '.bmp')
+
 def extract_metadata(img):
     """Extract metadata from a PIL Image object."""
     prompt = {}
@@ -273,21 +283,19 @@ def extract_metadata(img):
     
     # Add MIME type information
     if img.format:
-        mime_type = mimetypes.types_map.get(f".{img.format.lower()}")
-        if mime_type:
-            metadata["mime_type"] = mime_type
-        else:
-            # Fallback for common image formats
-            format_to_mime = {
-                "JPEG": "image/jpeg",
-                "JPG": "image/jpeg",
-                "PNG": "image/png",
-                "GIF": "image/gif",
-                "WEBP": "image/webp",
-                "TIFF": "image/tiff",
-                "BMP": "image/bmp"
-            }
-            metadata["mime_type"] = format_to_mime.get(img.format, "application/octet-stream")
+        print(f"[EmProps] Image format: {img.format}", flush=True)
+        # Direct format to MIME type mapping
+        format_to_mime = {
+            "JPEG": "image/jpeg",
+            "JPG": "image/jpeg",
+            "PNG": "image/png",
+            "GIF": "image/gif",
+            "WEBP": "image/webp",
+            "TIFF": "image/tiff",
+            "BMP": "image/bmp"
+        }
+        metadata["mime_type"] = format_to_mime.get(img.format.upper(), "application/octet-stream")
+        print(f"[EmProps] Using MIME type: {metadata['mime_type']}", flush=True)
     
     # Extract metadata based on image format
     if isinstance(img, (PngImageFile, JpegImageFile)):

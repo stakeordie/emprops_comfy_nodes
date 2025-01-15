@@ -26,16 +26,16 @@ class EmpropsImageLoader:
     FUNCTION = "load_image"
 
     def load_image(self, **kwargs):
-        print(f"[EmProps] Loading image from source type: {kwargs['source_type']}")
+        print(f"[EmProps] Loading image from source type: {kwargs['source_type']}", flush=True)
         
         if kwargs['source_type'] == 'upload':
             image_path = folder_paths.get_annotated_filepath(kwargs['image'])
-            print(f"[EmProps] Loading local file: {image_path}")
+            print(f"[EmProps] Loading local file: {image_path}", flush=True)
         elif kwargs['source_type'] == 'public_download':
-            print(f"[EmProps] Downloading from URL: {kwargs['url']}")
+            print(f"[EmProps] Downloading from URL: {kwargs['url']}", flush=True)
             image_path = try_download_file(kwargs['url'])
             if not image_path:
-                print(f"[EmProps] Error: Failed to download image from URL: {kwargs['url']}")
+                print(f"[EmProps] Error: Failed to download image from URL: {kwargs['url']}", flush=True)
                 raise Exception(f"Failed to download image from URL: {kwargs['url']}")
         else:  # s3
             s3_handler = S3Handler(kwargs.get('s3_bucket'))
@@ -43,13 +43,13 @@ class EmpropsImageLoader:
             os.makedirs(temp_dir, exist_ok=True)
             image_name = os.path.basename(kwargs['s3_key'])
             image_path = os.path.join(temp_dir, image_name)
-            print(f"[EmProps] Downloading from S3: {kwargs['s3_bucket']}/{kwargs['s3_key']}")
+            print(f"[EmProps] Downloading from S3: {kwargs['s3_bucket']}/{kwargs['s3_key']}", flush=True)
             success, error = s3_handler.download_file(kwargs['s3_key'], image_path)
             if not success:
-                print(f"[EmProps] Error: Failed to download image from S3: {error}")
+                print(f"[EmProps] Error: Failed to download image from S3: {error}", flush=True)
                 raise Exception(f"Failed to download image from S3: {error}")
 
-        print(f"[EmProps] Opening image: {image_path}")
+        print(f"[EmProps] Opening image: {image_path}", flush=True)
         img = Image.open(image_path)
         img = ImageOps.exif_transpose(img)
 
@@ -58,47 +58,47 @@ class EmpropsImageLoader:
         w, h = None, None
 
         excluded_formats = ['MPO']
-        print(f"[EmProps] Processing image format: {img.format}")
+        print(f"[EmProps] Processing image format: {img.format}", flush=True)
 
         for i in ImageSequence.Iterator(img):
             i = ImageOps.exif_transpose(i)
 
             if i.mode == 'I':
-                print(f"[EmProps] Converting mode 'I' image")
+                print(f"[EmProps] Converting mode 'I' image", flush=True)
                 i = i.point(lambda i: i * (1 / 255))
             image = i.convert("RGB")
 
             if len(output_images) == 0:
                 w = image.size[0]
                 h = image.size[1]
-                print(f"[EmProps] Image dimensions: {w}x{h}")
+                print(f"[EmProps] Image dimensions: {w}x{h}", flush=True)
 
             if image.size[0] != w or image.size[1] != h:
-                print(f"[EmProps] Skipping frame with mismatched dimensions: {image.size[0]}x{image.size[1]}")
+                print(f"[EmProps] Skipping frame with mismatched dimensions: {image.size[0]}x{image.size[1]}", flush=True)
                 continue
 
             image = np.array(image).astype(np.float32) / 255.0
             image = torch.from_numpy(image)[None,]
             if 'A' in i.getbands():
-                print("[EmProps] Processing alpha channel")
+                print("[EmProps] Processing alpha channel", flush=True)
                 mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
                 mask = 1. - torch.from_numpy(mask)
             else:
-                print("[EmProps] No alpha channel found, creating empty mask")
+                print("[EmProps] No alpha channel found, creating empty mask", flush=True)
                 mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
             output_images.append(image)
             output_masks.append(mask.unsqueeze(0))
 
         if len(output_images) > 1 and img.format not in excluded_formats:
-            print(f"[EmProps] Combining {len(output_images)} frames")
+            print(f"[EmProps] Combining {len(output_images)} frames", flush=True)
             output_image = torch.cat(output_images, dim=0)
             output_mask = torch.cat(output_masks, dim=0)
         else:
-            print("[EmProps] Using single frame")
+            print("[EmProps] Using single frame", flush=True)
             output_image = output_images[0]
             output_mask = output_masks[0]
 
-        print("[EmProps] Image loading complete")
+        print("[EmProps] Image loading complete", flush=True)
         return (output_image, output_mask)
 
     @classmethod

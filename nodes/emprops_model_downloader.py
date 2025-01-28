@@ -1,9 +1,7 @@
 import os
-import json
-import requests
-from datetime import datetime
 import folder_paths
-import tqdm
+import requests
+from tqdm import tqdm
 
 # Mapping of nodes and their fields to model types
 NODE_MODEL_TYPES = {
@@ -41,6 +39,14 @@ NODE_MODEL_TYPES = {
 class EmpropsModelDownloader:
     @classmethod
     def INPUT_TYPES(s):
+        # Get all available nodes and their fields
+        nodes = list(NODE_MODEL_TYPES.keys())
+        
+        # Get all possible fields across all nodes
+        all_fields = set()
+        for node_fields in NODE_MODEL_TYPES.values():
+            all_fields.update(node_fields.keys())
+        
         return {
             "required": {
                 "url": ("STRING", {"default": ""}),
@@ -49,22 +55,25 @@ class EmpropsModelDownloader:
             "optional": {
                 # Let users either specify model_type directly or use target_node + target_field
                 "model_type": (list(set(type for fields in NODE_MODEL_TYPES.values() for type in fields.values())), {"default": "checkpoints"}),
-                "target_node": ("STRING", {
+                "target_node": (nodes, {
                     "default": "CheckpointLoaderSimple", 
-                    "tooltip": "Node name or ID to download for. For API use, specify the node ID (e.g. '11' for DualCLIPLoader)"
+                    "tooltip": "Node to download for. For API use, you can also specify the node ID (e.g. '11' for DualCLIPLoader)"
                 }),
-                "target_field": ("STRING", {"default": "ckpt_name"}),
+                "target_field": (list(all_fields), {
+                    "default": "ckpt_name",
+                    "tooltip": "Which input field in the target node to download for"
+                }),
                 "target_directory": ("STRING", {
                     "default": "",
                     "tooltip": "Optional: Directly specify output directory (e.g. 'checkpoints' or custom path). If empty, will use model_type or target_node to determine directory."
                 }),
             }
         }
-    
-    CATEGORY = "EmProps"
-    RETURN_TYPES = ("STRING",)  
-    RETURN_NAMES = ("model_name",)  
+
+    RETURN_TYPES = ()
     FUNCTION = "run"
+    OUTPUT_NODE = True
+    CATEGORY = "Emprops"
 
     def get_node_type(self, target_node):
         """Convert node ID or name to node type"""
@@ -82,98 +91,41 @@ class EmpropsModelDownloader:
         
         raise ValueError(f"Unknown node type: {target_node}")
 
-    def __init__(self):
-        self.model_path = None
-        self.download_url = None
-        self.model_type = None
-        # Store metadata in the models directory
-        self.metadata_path = os.path.join(folder_paths.get_folder_paths("models")[0], "model_metadata.json")
-
-    def download_model(self):
-        # Get the models root directory from ComfyUI for this model type
-        models_dir = folder_paths.get_folder_paths("models")[0]
-        model_type_dir = os.path.join(models_dir, self.model_type)
-        
-        # Get the full path in the models directory
-        full_path = os.path.join(model_type_dir, self.model_path)
-        
-        # Check if the model file exists
-        if not os.path.exists(full_path):
-            print(f"[EmProps] Model not found at {full_path}. Downloading from {self.download_url}...")
-            response = requests.get(self.download_url)
-            
-            # Ensure the parent directories exist
-            os.makedirs(os.path.dirname(full_path), exist_ok=True)
-            
-            # Save the model file
-            with open(full_path, 'wb') as f:
-                f.write(response.content)
-            print(f"[EmProps] Model downloaded successfully to {full_path}")
-        else:
-            print(f"[EmProps] Model already exists at {full_path}")
-
-    def update_last_used(self):
-        # Initialize an empty metadata dictionary
-        metadata = {}
-        
-        # Load existing metadata if it exists
-        if os.path.exists(self.metadata_path):
-            try:
-                with open(self.metadata_path, 'r') as f:
-                    metadata = json.load(f)
-            except json.JSONDecodeError:
-                print(f"[EmProps] Warning: Could not parse metadata file at {self.metadata_path}")
-        
-        # Update the last used timestamp for this model
-        metadata[self.model_path] = {
-            "last_used": datetime.now().isoformat()
-        }
-        
-        # Save the updated metadata
-        os.makedirs(os.path.dirname(self.metadata_path), exist_ok=True)
-        json_str = json.dumps(metadata, indent=2)
-        with open(self.metadata_path, 'w') as f:
-            f.write(json_str)
-        print(f"[EmProps] Updated last used timestamp for {self.model_path}")
-
     def run(self, url, filename, model_type=None, target_node=None, target_field=None, target_directory=None):
-        # If target_directory is specified, use it directly
+        # Priority 1: Use target_directory if specified
         if target_directory:
-            # Handle both relative (to ComfyUI models dir) and absolute paths
             if os.path.isabs(target_directory):
                 output_dir = target_directory
             else:
-                # Get ComfyUI models dir and join with target_directory
-                models_dir = os.path.dirname(folder_paths.get_folder_paths("checkpoints")[0])
-                output_dir = os.path.join(models_dir, target_directory)
-            
-            os.makedirs(output_dir, exist_ok=True)
-            output_path = os.path.join(output_dir, filename)
-            
-            print(f"Using custom directory: {output_dir}")
+                base_models_dir = os.path.dirname(folder_paths.get_folder_paths("checkpoints")[0])
+                output_dir = os.path.join(base_models_dir, target_directory)
         
-        else:
-            # Original logic using model_type or target_node
-            if not model_type and target_node and target_field:
-                # Convert node ID/name to type
-                node_type = self.get_node_type(target_node)
-                
-                if node_type in NODE_MODEL_TYPES and target_field in NODE_MODEL_TYPES[node_type]:
-                    model_type = NODE_MODEL_TYPES[node_type][target_field]
-                else:
-                    raise ValueError(f"Invalid node type ({node_type}) or target_field ({target_field})")
+        # Priority 2: Use target_node and target_field if both specified
+        elif target_node and target_field:
+            node_type = self.get_node_type(target_node)
+            if node_type not in NODE_MODEL_TYPES or target_field not in NODE_MODEL_TYPES[node_type]:
+                raise ValueError(f"Invalid node type ({node_type}) or target_field ({target_field})")
             
-            if not model_type:
-                raise ValueError("Must specify either model_type, target_node+target_field, or target_directory")
-
-            # Get the output directory for this model type
+            model_type = NODE_MODEL_TYPES[node_type][target_field]
             output_dirs = folder_paths.get_folder_paths(model_type)
             if not output_dirs:
                 raise ValueError(f"No output directory found for model type: {model_type}")
-            
             output_dir = output_dirs[0]
-            os.makedirs(output_dir, exist_ok=True)
-            output_path = os.path.join(output_dir, filename)
+        
+        # Priority 3: Use model_type
+        elif model_type:
+            output_dirs = folder_paths.get_folder_paths(model_type)
+            if not output_dirs:
+                raise ValueError(f"No output directory found for model type: {model_type}")
+            output_dir = output_dirs[0]
+        
+        # No valid input provided
+        else:
+            raise ValueError("Must specify either target_directory, target_node+target_field, or model_type")
+
+        # Ensure directory exists and get output path
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, filename)
 
         # Check if file already exists
         if os.path.exists(output_path):
@@ -188,7 +140,7 @@ class EmpropsModelDownloader:
         # Download with progress bar
         total_size = int(response.headers.get('content-length', 0))
         block_size = 1024
-        progress_bar = tqdm.tqdm(total=total_size, unit='iB', unit_scale=True)
+        progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
         
         with open(output_path, 'wb') as f:
             for data in response.iter_content(block_size):
@@ -198,38 +150,3 @@ class EmpropsModelDownloader:
         progress_bar.close()
         print(f"Downloaded {filename}")
         return {}
-
-    @classmethod
-    def IS_CHANGED(s, **kwargs):
-        return False
-
-    @classmethod
-    def VALIDATE_INPUTS(s, **kwargs):
-        if not kwargs["filename"]:
-            return "Model path cannot be empty"
-        if not kwargs["url"]:
-            return "Download URL cannot be empty"
-        
-        # Check if path is trying to go outside models directory
-        if ".." in kwargs["filename"]:
-            return "Path cannot contain '..'"
-        
-        # Check if path has an extension
-        if not os.path.splitext(kwargs["filename"])[1]:
-            return "Path must include a file extension (e.g. .safetensors)"
-            
-        return True
-
-# Example usage
-if __name__ == "__main__":
-    # Define the model path and download URL
-    # These variables specify the location where the model will be saved and the URL from which it will be downloaded
-    filename = "path/to/model/file"
-    download_url = "http://example.com/model/file"
-    model_type = "checkpoints"
-    # Create an instance of the EmpropsModelDownloader class
-    # This instance will be used to download the model and update the last used timestamp
-    downloader = EmpropsModelDownloader()
-    # Run the downloader
-    # This method will download the model if it doesn't exist and update the last used timestamp
-    downloader.run(download_url, filename, model_type)

@@ -107,8 +107,11 @@ class EmpropsModelDownloader:
             if os.path.isabs(target_directory):
                 output_dir = target_directory
             else:
-                base_models_dir = os.path.dirname(folder_paths.get_folder_paths("checkpoints")[0])
-                output_dir = os.path.join(base_models_dir, target_directory)
+                # Use the first path from folder_paths directly
+                output_dir = folder_paths.get_folder_paths("checkpoints")[0]
+                if target_directory != "checkpoints":
+                    # If it's not "checkpoints", append it to the path
+                    output_dir = os.path.join(os.path.dirname(output_dir), target_directory)
             
             # Check if file exists in target directory
             output_path = os.path.join(output_dir, filename)

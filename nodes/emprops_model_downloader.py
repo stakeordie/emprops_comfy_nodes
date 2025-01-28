@@ -40,6 +40,7 @@ NODE_MODEL_TYPES = {
 class EmpropsModelDownloader:
     @classmethod
     def INPUT_TYPES(cls):
+        print("[EmProps] Getting INPUT_TYPES for EmpropsModelDownloader")
         # Get all registered nodes that are in our NODE_MODEL_TYPES mapping
         available_nodes = []
         for node_name in NODE_CLASS_MAPPINGS:

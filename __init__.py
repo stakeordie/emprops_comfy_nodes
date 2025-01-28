@@ -14,6 +14,12 @@ print(f"[EmProps] Module directory: {os.path.dirname(os.path.abspath(__file__))}
 print("[EmProps] Loading EmProps nodes")
 print(f"[EmProps] Current directory: {os.path.dirname(os.path.abspath(__file__))}")
 
+# Debug: Print node class details
+for name, cls in [(name, globals()[name]) for name in ['EmProps_Lora_Loader', 'EmProps_S3_Saver', 'EmpropsImageLoader', 'EmpropsModelDownloader']]:
+    print(f"[EmProps] Node class {name}:")
+    print(f"  - RETURN_TYPES: {getattr(cls, 'RETURN_TYPES', None)}")
+    print(f"  - INPUT_TYPES: {getattr(cls, 'INPUT_TYPES', None)}")
+
 NODE_CLASS_MAPPINGS = {
     "EmProps_Lora_Loader": EmProps_Lora_Loader,
     "EmProps_S3_Saver": EmProps_S3_Saver,

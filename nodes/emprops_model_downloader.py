@@ -7,13 +7,14 @@ from .helpers.paths import get_model_metadata_path, ensure_dir_exists, folder_pa
 class EmpropsModelDownloader:
     @classmethod
     def INPUT_TYPES(s):
-        # Get the models directory from paths module
-        models_dir = folder_paths["models"]
-        # List all files in the models directory
-        files = [f for f in os.listdir(models_dir) if os.path.isfile(os.path.join(models_dir, f))]
         return {
             "required": {
-                "local_save_path": (sorted(files),),  # File selector for local path
+                "local_save_path": ("STRING", {
+                    "default": "checkpoints/model.safetensors", 
+                    "multiline": False,
+                    "placeholder": "checkpoints/model.safetensors",
+                    "tooltip": "Path relative to models directory where the model will be saved"
+                }),
                 "model_url": ("STRING", {
                     "default": "", 
                     "multiline": False,
@@ -43,14 +44,15 @@ class EmpropsModelDownloader:
         if not os.path.exists(full_path):
             print(f"Model not found at {full_path}. Downloading from {self.download_url}...")
             response = requests.get(self.download_url)
-            # Ensure the directory exists
-            ensure_dir_exists(os.path.dirname(full_path))
+            
+            # Ensure the parent directories exist
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            
             # Save the downloaded model to the specified path
             with open(full_path, 'wb') as f:
                 f.write(response.content)
             print(f"Model downloaded and saved to {full_path}")
         else:
-            # If the model file already exists, print a message
             print(f"Model already exists at {full_path}")
 
     def update_last_used(self):
@@ -85,12 +87,19 @@ class EmpropsModelDownloader:
 
     @classmethod
     def VALIDATE_INPUTS(s, **kwargs):
-        # This method is used to validate the node's inputs
-        # If the inputs are valid, the node will be executed
         if not kwargs["local_save_path"]:
             return "Model path cannot be empty"
         if not kwargs["model_url"]:
             return "Download URL cannot be empty"
+        
+        # Check if path is trying to go outside models directory
+        if ".." in kwargs["local_save_path"]:
+            return "Path cannot contain '..'"
+        
+        # Check if path has an extension
+        if not os.path.splitext(kwargs["local_save_path"])[1]:
+            return "Path must include a file extension (e.g. .safetensors)"
+            
         return True
 
 # Example usage

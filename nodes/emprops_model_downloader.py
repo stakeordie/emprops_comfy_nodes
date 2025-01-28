@@ -44,6 +44,11 @@ class EmpropsModelDownloader:
         print("[EmProps DEBUG] RETURN_TYPES =", cls.RETURN_TYPES)
         print("[EmProps DEBUG] Type of RETURN_TYPES =", type(cls.RETURN_TYPES))
         
+        # Add debug logs for DualCLIPLoader's expected type
+        print("[EmProps DEBUG] DualCLIPLoader text_encoders list:", folder_paths.get_filename_list("text_encoders"))
+        print("[EmProps DEBUG] DualCLIPLoader input type:", type(folder_paths.get_filename_list("text_encoders")))
+        print("[EmProps DEBUG] DualCLIPLoader input type tuple format:", (folder_paths.get_filename_list("text_encoders"),))
+        
         # Get all registered nodes that are in our NODE_MODEL_TYPES mapping
         available_nodes = []
         for node_name in NODE_CLASS_MAPPINGS:

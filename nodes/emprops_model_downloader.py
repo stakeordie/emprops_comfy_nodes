@@ -40,7 +40,10 @@ NODE_MODEL_TYPES = {
 class EmpropsModelDownloader:
     @classmethod
     def INPUT_TYPES(cls):
-        print("[EmProps] Getting INPUT_TYPES for EmpropsModelDownloader")
+        print("[EmProps DEBUG] Getting INPUT_TYPES for EmpropsModelDownloader")
+        print("[EmProps DEBUG] RETURN_TYPES =", cls.RETURN_TYPES)
+        print("[EmProps DEBUG] Type of RETURN_TYPES =", type(cls.RETURN_TYPES))
+        
         # Get all registered nodes that are in our NODE_MODEL_TYPES mapping
         available_nodes = []
         for node_name in NODE_CLASS_MAPPINGS:
@@ -48,8 +51,9 @@ class EmpropsModelDownloader:
                 available_nodes.append(node_name)
         
         NODE_TYPES = available_nodes if available_nodes else ["CheckpointLoaderSimple"]
+        print("[EmProps DEBUG] Available node types:", NODE_TYPES)
         
-        return {
+        return_val = {
             "required": {
                 "url": ("STRING", {"default": ""}),
                 "filename": ("STRING", {"default": ""}),
@@ -61,12 +65,18 @@ class EmpropsModelDownloader:
                 "target_directory": ("STRING", {"default": "checkpoints"})
             }
         }
+        print("[EmProps DEBUG] INPUT_TYPES returning:", return_val)
+        return return_val
 
     @classmethod
     def get_available_filenames(cls, model_type="checkpoints"):
         try:
-            return folder_paths.get_filename_list(model_type)
-        except:
+            filenames = folder_paths.get_filename_list(model_type)
+            print("[EmProps DEBUG] Available filenames for", model_type, ":", filenames)
+            print("[EmProps DEBUG] Type of filenames:", type(filenames))
+            return filenames
+        except Exception as e:
+            print("[EmProps DEBUG] Error getting filenames:", str(e))
             return []
 
     RETURN_TYPES = ("LIST",)
@@ -92,6 +102,13 @@ class EmpropsModelDownloader:
         raise ValueError(f"Unknown node type: {target_node}")
 
     def run(self, url, filename, model_type=None, target_node=None, target_field=None, target_directory=None):
+        print("[EmProps DEBUG] Run called with:")
+        print("  - url:", url)
+        print("  - filename:", filename)
+        print("  - model_type:", model_type)
+        print("  - target_node:", target_node)
+        print("  - target_field:", target_field)
+        print("  - target_directory:", target_directory)
         # Debug: Print all available paths and model type info
         print("DEBUG: Model type:", model_type)
         print("DEBUG: Target node:", target_node)
@@ -153,6 +170,8 @@ class EmpropsModelDownloader:
             print("DEBUG: Final output path:", output_path)
             if os.path.exists(output_path):
                 print(f"File {filename} already exists in {output_dir}")
+                print("[EmProps DEBUG] Returning filename as list:", [filename])
+                print("[EmProps DEBUG] Return type:", type([filename]))
                 return [filename]
             
             # Download to target directory
@@ -173,6 +192,8 @@ class EmpropsModelDownloader:
             
             progress_bar.close()
             print(f"Downloaded {filename}")
+            print("[EmProps DEBUG] Returning filename as list:", [filename])
+            print("[EmProps DEBUG] Return type:", type([filename]))
             return [filename]
             
         # If no target_directory, try other methods
@@ -192,6 +213,8 @@ class EmpropsModelDownloader:
                     # Check if file already exists
                     if os.path.exists(output_path):
                         print(f"File {filename} already exists in {output_dir}")
+                        print("[EmProps DEBUG] Returning filename as list:", [filename])
+                        print("[EmProps DEBUG] Return type:", type([filename]))
                         return [filename]
                     
                     # Download the model
@@ -212,6 +235,8 @@ class EmpropsModelDownloader:
                     
                     progress_bar.close()
                     print(f"Downloaded {filename}")
+                    print("[EmProps DEBUG] Returning filename as list:", [filename])
+                    print("[EmProps DEBUG] Return type:", type([filename]))
                     return [filename]
             
             raise ValueError("Must specify target_directory if model_type and target_node+field are not provided or invalid")

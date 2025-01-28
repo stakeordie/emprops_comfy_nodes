@@ -31,37 +31,33 @@ NODE_MODEL_TYPES = {
     },
     "StyleModelLoader": {
         "style_model_name": "style_models"
+    },
+    "DualCLIPLoader": {
+        "clip_name1": "text_encoders",
+        "clip_name2": "text_encoders"
     }
 }
 
 class EmpropsModelDownloader:
     @classmethod
     def INPUT_TYPES(s):
-        # Get all available nodes that can load models
-        nodes = list(NODE_MODEL_TYPES.keys())
-        
         return {
             "required": {
-                "model_type": (["checkpoints", "loras", "vae", "embeddings", "diffusion_models", "clip_vision", "style_models"], {
-                    "default": "checkpoints",
-                    "tooltip": "Type of model being downloaded"
-                }),
-                "local_save_path": ("STRING", {
-                    "default": "model.safetensors", 
-                    "multiline": False,
-                    "placeholder": "model.safetensors",
-                    "tooltip": "Path relative to selected model type directory where the model will be saved"
-                }),
-                "model_url": ("STRING", {
-                    "default": "", 
-                    "multiline": False,
-                    "placeholder": "https://example.com/model.safetensors",
-                    "tooltip": "URL to download the model from"
-                }),
+                "url": ("STRING", {"default": ""}),
+                "filename": ("STRING", {"default": ""}),
             },
             "optional": {
-                "target_node": (nodes, {"default": "CheckpointLoaderSimple"}),
+                # Let users either specify model_type directly or use target_node + target_field
+                "model_type": (list(set(type for fields in NODE_MODEL_TYPES.values() for type in fields.values())), {"default": "checkpoints"}),
+                "target_node": ("STRING", {
+                    "default": "CheckpointLoaderSimple", 
+                    "tooltip": "Node name or ID to download for. For API use, specify the node ID (e.g. '11' for DualCLIPLoader)"
+                }),
                 "target_field": ("STRING", {"default": "ckpt_name"}),
+                "target_directory": ("STRING", {
+                    "default": "",
+                    "tooltip": "Optional: Directly specify output directory (e.g. 'checkpoints' or custom path). If empty, will use model_type or target_node to determine directory."
+                }),
             }
         }
     
@@ -69,6 +65,22 @@ class EmpropsModelDownloader:
     RETURN_TYPES = ("STRING",)  
     RETURN_NAMES = ("model_name",)  
     FUNCTION = "run"
+
+    def get_node_type(self, target_node):
+        """Convert node ID or name to node type"""
+        # If target_node is a number (as string), it's a node ID
+        # We'd need to get the actual node type from the workflow
+        # For now, assume it's DualCLIPLoader if ID is 11
+        if target_node.isdigit():
+            if target_node == "11":
+                return "DualCLIPLoader"
+            raise ValueError(f"Unknown node ID: {target_node}")
+        
+        # Otherwise treat it as a node type name
+        if target_node in NODE_MODEL_TYPES:
+            return target_node
+        
+        raise ValueError(f"Unknown node type: {target_node}")
 
     def __init__(self):
         self.model_path = None
@@ -124,32 +136,68 @@ class EmpropsModelDownloader:
             f.write(json_str)
         print(f"[EmProps] Updated last used timestamp for {self.model_path}")
 
-    def run(self, model_type, local_save_path, model_url, target_node=None, target_field=None):
-        # If model_type not specified, try to get it from target_node and target_field
-        if not model_type and target_node and target_field:
-            if target_node in NODE_MODEL_TYPES and target_field in NODE_MODEL_TYPES[target_node]:
-                model_type = NODE_MODEL_TYPES[target_node][target_field]
+    def run(self, url, filename, model_type=None, target_node=None, target_field=None, target_directory=None):
+        # If target_directory is specified, use it directly
+        if target_directory:
+            # Handle both relative (to ComfyUI models dir) and absolute paths
+            if os.path.isabs(target_directory):
+                output_dir = target_directory
             else:
-                raise ValueError(f"Invalid target_node ({target_node}) or target_field ({target_field})")
+                # Get ComfyUI models dir and join with target_directory
+                models_dir = os.path.dirname(folder_paths.get_folder_paths("checkpoints")[0])
+                output_dir = os.path.join(models_dir, target_directory)
+            
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, filename)
+            
+            print(f"Using custom directory: {output_dir}")
         
-        if not model_type:
-            raise ValueError("Must specify either model_type or both target_node and target_field")
+        else:
+            # Original logic using model_type or target_node
+            if not model_type and target_node and target_field:
+                # Convert node ID/name to type
+                node_type = self.get_node_type(target_node)
+                
+                if node_type in NODE_MODEL_TYPES and target_field in NODE_MODEL_TYPES[node_type]:
+                    model_type = NODE_MODEL_TYPES[node_type][target_field]
+                else:
+                    raise ValueError(f"Invalid node type ({node_type}) or target_field ({target_field})")
+            
+            if not model_type:
+                raise ValueError("Must specify either model_type, target_node+target_field, or target_directory")
 
-        # Store the paths
-        self.model_path = local_save_path
-        self.download_url = model_url
-        self.model_type = model_type
+            # Get the output directory for this model type
+            output_dirs = folder_paths.get_folder_paths(model_type)
+            if not output_dirs:
+                raise ValueError(f"No output directory found for model type: {model_type}")
+            
+            output_dir = output_dirs[0]
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, filename)
 
-        print(f"[EmProps] Downloading {model_type} model to {self.model_path}")
-
-        # Download the model if needed
-        self.download_model()
+        # Check if file already exists
+        if os.path.exists(output_path):
+            print(f"File {filename} already exists in {output_dir}")
+            return {}
+            
+        # Download the model
+        print(f"Downloading {filename} to {output_dir}")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
         
-        # Update the last used timestamp
-        self.update_last_used()
+        # Download with progress bar
+        total_size = int(response.headers.get('content-length', 0))
+        block_size = 1024
+        progress_bar = tqdm.tqdm(total=total_size, unit='iB', unit_scale=True)
         
-        # Return just the model filename
-        return (os.path.basename(self.model_path),)
+        with open(output_path, 'wb') as f:
+            for data in response.iter_content(block_size):
+                progress_bar.update(len(data))
+                f.write(data)
+        
+        progress_bar.close()
+        print(f"Downloaded {filename}")
+        return {}
 
     @classmethod
     def IS_CHANGED(s, **kwargs):
@@ -157,17 +205,17 @@ class EmpropsModelDownloader:
 
     @classmethod
     def VALIDATE_INPUTS(s, **kwargs):
-        if not kwargs["local_save_path"]:
+        if not kwargs["filename"]:
             return "Model path cannot be empty"
-        if not kwargs["model_url"]:
+        if not kwargs["url"]:
             return "Download URL cannot be empty"
         
         # Check if path is trying to go outside models directory
-        if ".." in kwargs["local_save_path"]:
+        if ".." in kwargs["filename"]:
             return "Path cannot contain '..'"
         
         # Check if path has an extension
-        if not os.path.splitext(kwargs["local_save_path"])[1]:
+        if not os.path.splitext(kwargs["filename"])[1]:
             return "Path must include a file extension (e.g. .safetensors)"
             
         return True
@@ -176,7 +224,7 @@ class EmpropsModelDownloader:
 if __name__ == "__main__":
     # Define the model path and download URL
     # These variables specify the location where the model will be saved and the URL from which it will be downloaded
-    model_path = "path/to/model/file"
+    filename = "path/to/model/file"
     download_url = "http://example.com/model/file"
     model_type = "checkpoints"
     # Create an instance of the EmpropsModelDownloader class
@@ -184,4 +232,4 @@ if __name__ == "__main__":
     downloader = EmpropsModelDownloader()
     # Run the downloader
     # This method will download the model if it doesn't exist and update the last used timestamp
-    downloader.run(model_type, model_path, download_url)
+    downloader.run(download_url, filename, model_type)

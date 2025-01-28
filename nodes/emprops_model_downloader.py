@@ -102,19 +102,31 @@ class EmpropsModelDownloader:
         raise ValueError(f"Unknown node type: {target_node}")
 
     def run(self, url, filename, model_type=None, target_node=None, target_field=None, target_directory=None):
+        # Debug: Print all available paths
+        print("DEBUG: Available paths for checkpoints:", folder_paths.get_folder_paths("checkpoints"))
+        print("DEBUG: Base path from folder_paths:", folder_paths.base_path)
+        
         # If we have target_directory, that's all we need
         if target_directory:
             if os.path.isabs(target_directory):
                 output_dir = target_directory
             else:
-                # Use the first path from folder_paths directly
-                output_dir = folder_paths.get_folder_paths("checkpoints")[0]
-                if target_directory != "checkpoints":
-                    # If it's not "checkpoints", append it to the path
-                    output_dir = os.path.join(os.path.dirname(output_dir), target_directory)
+                # Get the first checkpoint path which should be the custom one
+                checkpoint_path = folder_paths.get_folder_paths("checkpoints")[0]
+                print("DEBUG: Using checkpoint path:", checkpoint_path)
+                
+                if target_directory == "checkpoints":
+                    output_dir = checkpoint_path
+                else:
+                    # Get models directory and append target_directory
+                    models_dir = os.path.dirname(checkpoint_path)
+                    output_dir = os.path.join(models_dir, target_directory)
+                
+                print("DEBUG: Final output directory:", output_dir)
             
             # Check if file exists in target directory
             output_path = os.path.join(output_dir, filename)
+            print("DEBUG: Final output path:", output_path)
             if os.path.exists(output_path):
                 print(f"File {filename} already exists in {output_dir}")
                 return (filename,)  # Return as tuple

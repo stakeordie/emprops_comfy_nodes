@@ -29,10 +29,9 @@ class EmpropsModelDownloader:
     RETURN_NAMES = ("model_name",)  
     FUNCTION = "run"
 
-    def __init__(self, local_save_path, model_url):
-        # Initialize the downloader with the model path and download URL
-        self.model_path = local_save_path
-        self.download_url = model_url
+    def __init__(self):
+        self.model_path = None
+        self.download_url = None
         # Get the metadata path from the paths module
         self.metadata_path = get_model_metadata_path()
 
@@ -71,12 +70,16 @@ class EmpropsModelDownloader:
             f.write(json_str)  # Then write the entire string at once
         print(f"Updated last used timestamp for {self.model_path}")
 
-    def run(self):
+    def run(self, local_save_path, model_url):
+        # Store the paths
+        self.model_path = local_save_path
+        self.download_url = model_url
+        
         # Download the model if it doesn't exist
         self.download_model()
         # Update the last used timestamp
         self.update_last_used()
-        # Return the model filename (it's already just the filename from the selector)
+        # Return the model filename
         return (self.model_path,)
 
     @classmethod
@@ -110,7 +113,7 @@ if __name__ == "__main__":
     download_url = "http://example.com/model/file"
     # Create an instance of the EmpropsModelDownloader class
     # This instance will be used to download the model and update the last used timestamp
-    downloader = EmpropsModelDownloader(model_path, download_url)
+    downloader = EmpropsModelDownloader()
     # Run the downloader
     # This method will download the model if it doesn't exist and update the last used timestamp
-    downloader.run()
+    downloader.run(model_path, download_url)

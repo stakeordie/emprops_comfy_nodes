@@ -39,7 +39,7 @@ NODE_MODEL_TYPES = {
 
 class EmpropsModelDownloader:
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(cls):
         # Get all registered nodes that are in our NODE_MODEL_TYPES mapping
         available_nodes = []
         for node_name in NODE_CLASS_MAPPINGS:
@@ -79,7 +79,8 @@ class EmpropsModelDownloader:
             }
         }
 
-    RETURN_TYPES = ()
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("FILENAME",)
     FUNCTION = "run"
     OUTPUT_NODE = True
     CATEGORY = "Emprops"
@@ -101,61 +102,81 @@ class EmpropsModelDownloader:
         raise ValueError(f"Unknown node type: {target_node}")
 
     def run(self, url, filename, model_type=None, target_node=None, target_field=None, target_directory=None):
-        # Priority 1: Use target_directory if specified
+        # If we have target_directory, that's all we need
         if target_directory:
             if os.path.isabs(target_directory):
                 output_dir = target_directory
             else:
                 base_models_dir = os.path.dirname(folder_paths.get_folder_paths("checkpoints")[0])
                 output_dir = os.path.join(base_models_dir, target_directory)
-        
-        # Priority 2: Use target_node and target_field if both specified
-        elif target_node and target_field:
-            node_type = self.get_node_type(target_node)
-            if node_type not in NODE_MODEL_TYPES or target_field not in NODE_MODEL_TYPES[node_type]:
-                raise ValueError(f"Invalid node type ({node_type}) or target_field ({target_field})")
             
-            model_type = NODE_MODEL_TYPES[node_type][target_field]
-            output_dirs = folder_paths.get_folder_paths(model_type)
-            if not output_dirs:
-                raise ValueError(f"No output directory found for model type: {model_type}")
-            output_dir = output_dirs[0]
-        
-        # Priority 3: Use model_type
-        elif model_type:
-            output_dirs = folder_paths.get_folder_paths(model_type)
-            if not output_dirs:
-                raise ValueError(f"No output directory found for model type: {model_type}")
-            output_dir = output_dirs[0]
-        
-        # No valid input provided
-        else:
-            raise ValueError("Must specify either target_directory, target_node+target_field, or model_type")
-
-        # Ensure directory exists and get output path
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, filename)
-
-        # Check if file already exists
-        if os.path.exists(output_path):
-            print(f"File {filename} already exists in {output_dir}")
-            return {}
+            # Check if file exists in target directory
+            output_path = os.path.join(output_dir, filename)
+            if os.path.exists(output_path):
+                print(f"File {filename} already exists in {output_dir}")
+                return filename  # Return just the string
             
-        # Download the model
-        print(f"Downloading {filename} to {output_dir}")
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
-        
-        # Download with progress bar
-        total_size = int(response.headers.get('content-length', 0))
-        block_size = 1024
-        progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
-        
-        with open(output_path, 'wb') as f:
-            for data in response.iter_content(block_size):
-                progress_bar.update(len(data))
-                f.write(data)
-        
-        progress_bar.close()
-        print(f"Downloaded {filename}")
-        return {}
+            # Download to target directory
+            os.makedirs(output_dir, exist_ok=True)
+            print(f"Downloading {filename} to {output_dir}")
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            
+            # Download with progress bar
+            total_size = int(response.headers.get('content-length', 0))
+            block_size = 1024
+            progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
+            
+            with open(output_path, 'wb') as f:
+                for data in response.iter_content(block_size):
+                    progress_bar.update(len(data))
+                    f.write(data)
+            
+            progress_bar.close()
+            print(f"Downloaded {filename}")
+            return filename  # Return just the string
+            
+        # If no target_directory, try other methods
+        try:
+            # Try to get output directory from model_type or target_node
+            if target_node and target_field:
+                node_type = self.get_node_type(target_node)
+                if node_type in NODE_MODEL_TYPES and target_field in NODE_MODEL_TYPES[node_type]:
+                    model_type = NODE_MODEL_TYPES[node_type][target_field]
+            
+            if model_type:
+                output_dirs = folder_paths.get_folder_paths(model_type)
+                if output_dirs:
+                    output_dir = output_dirs[0]
+                    output_path = os.path.join(output_dir, filename)
+                    
+                    # Check if file already exists
+                    if os.path.exists(output_path):
+                        print(f"File {filename} already exists in {output_dir}")
+                        return filename
+                    
+                    # Download the model
+                    os.makedirs(output_dir, exist_ok=True)
+                    print(f"Downloading {filename} to {output_dir}")
+                    response = requests.get(url, stream=True)
+                    response.raise_for_status()
+                    
+                    # Download with progress bar
+                    total_size = int(response.headers.get('content-length', 0))
+                    block_size = 1024
+                    progress_bar = tqdm(total=total_size, unit='iB', unit_scale=True)
+                    
+                    with open(output_path, 'wb') as f:
+                        for data in response.iter_content(block_size):
+                            progress_bar.update(len(data))
+                            f.write(data)
+                    
+                    progress_bar.close()
+                    print(f"Downloaded {filename}")
+                    return filename
+            
+            raise ValueError("Must specify target_directory if model_type and target_node+field are not provided or invalid")
+            
+        except Exception as e:
+            print(f"Error using model_type or target_node: {str(e)}")
+            raise ValueError("When not using target_directory, both model_type or target_node+field must be valid")

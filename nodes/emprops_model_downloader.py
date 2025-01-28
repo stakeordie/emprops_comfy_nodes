@@ -79,8 +79,8 @@ class EmpropsModelDownloader:
         self.download_model()
         # Update the last used timestamp
         self.update_last_used()
-        # Return the model filename
-        return (self.model_path,)
+        # Return just the model filename without the path
+        return (os.path.basename(self.model_path),)
 
     @classmethod
     def IS_CHANGED(s, **kwargs):

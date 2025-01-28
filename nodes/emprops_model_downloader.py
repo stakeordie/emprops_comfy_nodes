@@ -80,7 +80,7 @@ class EmpropsModelDownloader:
             }
         }
 
-    RETURN_TYPES = (list,)
+    RETURN_TYPES = ("LIST",)
     RETURN_NAMES = ("FILENAME",)
     FUNCTION = "run"
     OUTPUT_NODE = True

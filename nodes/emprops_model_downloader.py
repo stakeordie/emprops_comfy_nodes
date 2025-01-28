@@ -2,6 +2,7 @@ import os
 import folder_paths
 import requests
 from tqdm import tqdm
+from nodes import NODE_CLASS_MAPPINGS
 
 # Mapping of nodes and their fields to model types
 NODE_MODEL_TYPES = {
@@ -39,13 +40,21 @@ NODE_MODEL_TYPES = {
 class EmpropsModelDownloader:
     @classmethod
     def INPUT_TYPES(s):
-        # Get all available nodes and their fields
-        nodes = list(NODE_MODEL_TYPES.keys())
+        # Get all registered nodes that are in our NODE_MODEL_TYPES mapping
+        available_nodes = []
+        for node_name in NODE_CLASS_MAPPINGS:
+            if node_name in NODE_MODEL_TYPES:
+                available_nodes.append(node_name)
+        
+        if not available_nodes:
+            print("Warning: No compatible model loader nodes found!")
+            available_nodes = list(NODE_MODEL_TYPES.keys())  # Fallback to our mapping
         
         # Get all possible fields across all nodes
         all_fields = set()
-        for node_fields in NODE_MODEL_TYPES.values():
-            all_fields.update(node_fields.keys())
+        for node_name in available_nodes:
+            if node_name in NODE_MODEL_TYPES:
+                all_fields.update(NODE_MODEL_TYPES[node_name].keys())
         
         return {
             "required": {
@@ -55,7 +64,7 @@ class EmpropsModelDownloader:
             "optional": {
                 # Let users either specify model_type directly or use target_node + target_field
                 "model_type": (list(set(type for fields in NODE_MODEL_TYPES.values() for type in fields.values())), {"default": "checkpoints"}),
-                "target_node": (nodes, {
+                "target_node": (available_nodes, {
                     "default": "CheckpointLoaderSimple", 
                     "tooltip": "Node to download for. For API use, you can also specify the node ID (e.g. '11' for DualCLIPLoader)"
                 }),

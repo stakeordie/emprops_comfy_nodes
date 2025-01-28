@@ -15,6 +15,11 @@ class EmpropsModelDownloader:
                 "download_url": ("STRING", {"default": "", "multiline": False}),
             },
         }
+    
+    CATEGORY = "EmProps"
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("model_path",)
+    FUNCTION = "run"
 
     def __init__(self, model_path, download_url):
         # Initialize the downloader with the model path and download URL
@@ -60,6 +65,7 @@ class EmpropsModelDownloader:
         # Update the last used timestamp for the model
         # This method keeps track of when the model was last used
         self.update_last_used()
+        return self.model_path
 
     @classmethod
     def IS_CHANGED(s, **kwargs):

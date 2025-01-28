@@ -1,6 +1,6 @@
 import os
 import sys
-import folder_paths
+from .nodes.helpers.paths import folder_paths
 from .nodes.emprops_lora_loader import EmProps_Lora_Loader
 from .nodes.emprops_s3_saver import EmProps_S3_Saver
 from .nodes.emprops_image_loader import EmpropsImageLoader

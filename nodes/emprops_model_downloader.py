@@ -114,7 +114,7 @@ class EmpropsModelDownloader:
             output_path = os.path.join(output_dir, filename)
             if os.path.exists(output_path):
                 print(f"File {filename} already exists in {output_dir}")
-                return filename  # Return just the string
+                return (filename,)  # Return as tuple
             
             # Download to target directory
             os.makedirs(output_dir, exist_ok=True)
@@ -134,7 +134,7 @@ class EmpropsModelDownloader:
             
             progress_bar.close()
             print(f"Downloaded {filename}")
-            return filename  # Return just the string
+            return (filename,)  # Return as tuple
             
         # If no target_directory, try other methods
         try:
@@ -153,7 +153,7 @@ class EmpropsModelDownloader:
                     # Check if file already exists
                     if os.path.exists(output_path):
                         print(f"File {filename} already exists in {output_dir}")
-                        return filename
+                        return (filename,)  # Return as tuple
                     
                     # Download the model
                     os.makedirs(output_dir, exist_ok=True)
@@ -173,7 +173,7 @@ class EmpropsModelDownloader:
                     
                     progress_bar.close()
                     print(f"Downloaded {filename}")
-                    return filename
+                    return (filename,)  # Return as tuple
             
             raise ValueError("Must specify target_directory if model_type and target_node+field are not provided or invalid")
             

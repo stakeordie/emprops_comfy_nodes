@@ -2,45 +2,56 @@ import os
 import json
 import requests
 from datetime import datetime
-from .helpers.paths import get_model_metadata_path, ensure_dir_exists
+from .helpers.paths import get_model_metadata_path, ensure_dir_exists, folder_paths
 
 class EmpropsModelDownloader:
     @classmethod
     def INPUT_TYPES(s):
-        # Define the input types for the node
-        # This method is used to specify the types of inputs the node expects
+        # Get the models directory from paths module
+        models_dir = folder_paths["models"]
+        # List all files in the models directory
+        files = [f for f in os.listdir(models_dir) if os.path.isfile(os.path.join(models_dir, f))]
         return {
             "required": {
-                "model_path": ("STRING", {"default": "", "multiline": False}),
-                "download_url": ("STRING", {"default": "", "multiline": False}),
+                "local_save_path": (sorted(files),),  # File selector for local path
+                "model_url": ("STRING", {
+                    "default": "", 
+                    "multiline": False,
+                    "placeholder": "https://example.com/model.safetensors",
+                    "tooltip": "URL to download the model from"
+                }),
             },
         }
     
     CATEGORY = "EmProps"
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("model_path",)
+    RETURN_TYPES = ("STRING",)  
+    RETURN_NAMES = ("model_name",)  
     FUNCTION = "run"
 
-    def __init__(self, model_path, download_url):
+    def __init__(self, local_save_path, model_url):
         # Initialize the downloader with the model path and download URL
-        self.model_path = model_path
-        self.download_url = download_url
+        self.model_path = local_save_path
+        self.download_url = model_url
         # Get the metadata path from the paths module
         self.metadata_path = get_model_metadata_path()
 
     def download_model(self):
+        # Get the full path in the models directory
+        full_path = os.path.join(folder_paths["models"], self.model_path)
+        
         # Check if the model file exists
-        # If the model file does not exist, download it from the specified URL
-        if not os.path.exists(self.model_path):
-            print(f"Model not found at {self.model_path}. Downloading from {self.download_url}...")
+        if not os.path.exists(full_path):
+            print(f"Model not found at {full_path}. Downloading from {self.download_url}...")
             response = requests.get(self.download_url)
+            # Ensure the directory exists
+            ensure_dir_exists(os.path.dirname(full_path))
             # Save the downloaded model to the specified path
-            with open(self.model_path, 'wb') as f:
+            with open(full_path, 'wb') as f:
                 f.write(response.content)
-            print(f"Model downloaded and saved to {self.model_path}")
+            print(f"Model downloaded and saved to {full_path}")
         else:
             # If the model file already exists, print a message
-            print(f"Model already exists at {self.model_path}")
+            print(f"Model already exists at {full_path}")
 
     def update_last_used(self):
         # Initialize an empty metadata dictionary
@@ -60,12 +71,11 @@ class EmpropsModelDownloader:
 
     def run(self):
         # Download the model if it doesn't exist
-        # This method ensures that the model is available before it is used
         self.download_model()
-        # Update the last used timestamp for the model
-        # This method keeps track of when the model was last used
+        # Update the last used timestamp
         self.update_last_used()
-        return self.model_path
+        # Return the model filename (it's already just the filename from the selector)
+        return (self.model_path,)
 
     @classmethod
     def IS_CHANGED(s, **kwargs):
@@ -77,6 +87,10 @@ class EmpropsModelDownloader:
     def VALIDATE_INPUTS(s, **kwargs):
         # This method is used to validate the node's inputs
         # If the inputs are valid, the node will be executed
+        if not kwargs["local_save_path"]:
+            return "Model path cannot be empty"
+        if not kwargs["model_url"]:
+            return "Download URL cannot be empty"
         return True
 
 # Example usage

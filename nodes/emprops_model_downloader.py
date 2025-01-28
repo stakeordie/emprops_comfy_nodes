@@ -79,7 +79,7 @@ class EmpropsModelDownloader:
             }
         }
 
-    RETURN_TYPES = ("STRING",)
+    RETURN_TYPES = (list,)
     RETURN_NAMES = ("FILENAME",)
     FUNCTION = "run"
     OUTPUT_NODE = True
@@ -102,6 +102,20 @@ class EmpropsModelDownloader:
         raise ValueError(f"Unknown node type: {target_node}")
 
     def run(self, url, filename, model_type=None, target_node=None, target_field=None, target_directory=None):
+        # Debug: Print all available paths and model type info
+        print("DEBUG: Model type:", model_type)
+        print("DEBUG: Target node:", target_node)
+        print("DEBUG: Target field:", target_field)
+        if target_node and target_field:
+            node_type = self.get_node_type(target_node)
+            print("DEBUG: Node type:", node_type)
+            if node_type in NODE_MODEL_TYPES:
+                print("DEBUG: Node model types:", NODE_MODEL_TYPES[node_type])
+                if target_field in NODE_MODEL_TYPES[node_type]:
+                    determined_type = NODE_MODEL_TYPES[node_type][target_field]
+                    print("DEBUG: Determined model type:", determined_type)
+                    print("DEBUG: Available files:", folder_paths.get_filename_list(determined_type))
+        
         # Debug: Print all available paths
         print("DEBUG: Available paths for checkpoints:", folder_paths.get_folder_paths("checkpoints"))
         print("DEBUG: Base path from folder_paths:", folder_paths.base_path)
@@ -149,7 +163,7 @@ class EmpropsModelDownloader:
             print("DEBUG: Final output path:", output_path)
             if os.path.exists(output_path):
                 print(f"File {filename} already exists in {output_dir}")
-                return filename  # Return just the filename
+                return [filename]
             
             # Download to target directory
             os.makedirs(output_dir, exist_ok=True)
@@ -169,7 +183,7 @@ class EmpropsModelDownloader:
             
             progress_bar.close()
             print(f"Downloaded {filename}")
-            return filename  # Return just the filename
+            return [filename]
             
         # If no target_directory, try other methods
         try:
@@ -188,7 +202,7 @@ class EmpropsModelDownloader:
                     # Check if file already exists
                     if os.path.exists(output_path):
                         print(f"File {filename} already exists in {output_dir}")
-                        return filename  # Return just the filename
+                        return [filename]
                     
                     # Download the model
                     os.makedirs(output_dir, exist_ok=True)
@@ -208,10 +222,9 @@ class EmpropsModelDownloader:
                     
                     progress_bar.close()
                     print(f"Downloaded {filename}")
-                    return filename  # Return just the filename
+                    return [filename]
             
             raise ValueError("Must specify target_directory if model_type and target_node+field are not provided or invalid")
-            
         except Exception as e:
-            print(f"Error using model_type or target_node: {str(e)}")
-            raise ValueError("When not using target_directory, both model_type or target_node+field must be valid")
+            print(f"Error downloading model: {str(e)}")
+            raise e

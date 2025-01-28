@@ -47,15 +47,7 @@ class EmpropsModelDownloader:
             if node_name in NODE_MODEL_TYPES:
                 available_nodes.append(node_name)
         
-        if not available_nodes:
-            print("Warning: No compatible model loader nodes found!")
-            available_nodes = list(NODE_MODEL_TYPES.keys())  # Fallback to our mapping
-        
-        # Get all possible fields across all nodes
-        all_fields = set()
-        for node_name in available_nodes:
-            if node_name in NODE_MODEL_TYPES:
-                all_fields.update(NODE_MODEL_TYPES[node_name].keys())
+        NODE_TYPES = available_nodes if available_nodes else ["CheckpointLoaderSimple"]
         
         return {
             "required": {
@@ -63,22 +55,19 @@ class EmpropsModelDownloader:
                 "filename": ("STRING", {"default": ""}),
             },
             "optional": {
-                # Let users either specify model_type directly or use target_node + target_field
-                "model_type": (list(set(type for fields in NODE_MODEL_TYPES.values() for type in fields.values())), {"default": "checkpoints"}),
-                "target_node": (available_nodes, {
-                    "default": "CheckpointLoaderSimple", 
-                    "tooltip": "Node to download for. For API use, you can also specify the node ID (e.g. '11' for DualCLIPLoader)"
-                }),
-                "target_field": (list(all_fields), {
-                    "default": "ckpt_name",
-                    "tooltip": "Which input field in the target node to download for"
-                }),
-                "target_directory": ("STRING", {
-                    "default": "",
-                    "tooltip": "Optional: Directly specify output directory (e.g. 'checkpoints' or custom path). If empty, will use model_type or target_node to determine directory."
-                }),
+                "model_type": ([k for k in folder_paths.folder_names_and_paths.keys()], {"default": "checkpoints"}),
+                "target_node": (NODE_TYPES, {"default": "CheckpointLoaderSimple"}),
+                "target_field": (["ckpt_name"], {"default": "ckpt_name"}),
+                "target_directory": ("STRING", {"default": "checkpoints"})
             }
         }
+
+    @classmethod
+    def get_available_filenames(cls, model_type="checkpoints"):
+        try:
+            return folder_paths.get_filename_list(model_type)
+        except:
+            return []
 
     RETURN_TYPES = ("LIST",)
     RETURN_NAMES = ("FILENAME",)

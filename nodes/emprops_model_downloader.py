@@ -111,15 +111,35 @@ class EmpropsModelDownloader:
             if os.path.isabs(target_directory):
                 output_dir = target_directory
             else:
-                # Get the first checkpoint path which should be the custom one
-                checkpoint_path = folder_paths.get_folder_paths("checkpoints")[0]
-                print("DEBUG: Using checkpoint path:", checkpoint_path)
+                # Find the shared path in the available paths
+                checkpoint_paths = folder_paths.get_folder_paths("checkpoints")
+                shared_path = None
+                
+                # First try to find exact match for shared/models/checkpoints
+                for path in checkpoint_paths:
+                    if path.endswith("/shared/models/checkpoints") or path.endswith("/shared/models/checkpoints/"):
+                        shared_path = path
+                        break
+                
+                # If not found, look for any path containing shared/models
+                if not shared_path:
+                    for path in checkpoint_paths:
+                        if "/shared/models" in path:
+                            shared_path = path
+                            break
+                
+                # If still not found, use first path
+                if not shared_path:
+                    print("WARNING: Could not find shared models path, using first available path")
+                    shared_path = checkpoint_paths[0]
+                
+                print("DEBUG: Using shared path:", shared_path)
                 
                 if target_directory == "checkpoints":
-                    output_dir = checkpoint_path
+                    output_dir = shared_path
                 else:
                     # Get models directory and append target_directory
-                    models_dir = os.path.dirname(checkpoint_path)
+                    models_dir = os.path.dirname(shared_path)  # Remove 'checkpoints'
                     output_dir = os.path.join(models_dir, target_directory)
                 
                 print("DEBUG: Final output directory:", output_dir)

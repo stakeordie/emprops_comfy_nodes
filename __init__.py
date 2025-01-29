@@ -5,6 +5,10 @@ from .nodes.emprops_lora_loader import EmProps_Lora_Loader
 from .nodes.emprops_s3_saver import EmProps_S3_Saver
 from .nodes.emprops_image_loader import EmpropsImageLoader
 from .nodes.emprops_model_downloader import EmpropsModelDownloader
+from .nodes.emprops_model_downloader_checkpoint import EmpropsModelDownloaderCheckpoint
+from .nodes.emprops_model_downloader_clip import EmpropsModelDownloaderClip
+from .nodes.emprops_model_downloader_clip_vision import EmpropsModelDownloaderClipVision
+from .nodes.emprops_text_s3_saver import EmProps_Text_S3_Saver
 
 print("[EmProps] Starting EmProps initialization")
 print(f"[EmProps] Python path: {sys.path}")
@@ -25,6 +29,10 @@ NODE_CLASS_MAPPINGS = {
     "EmProps_S3_Saver": EmProps_S3_Saver,
     "EmProps_Image_Loader": EmpropsImageLoader,
     "EmpropsModelDownloader": EmpropsModelDownloader,
+    "EmpropsModelDownloaderCheckpoint": EmpropsModelDownloaderCheckpoint,
+    "EmpropsModelDownloaderClip": EmpropsModelDownloaderClip,
+    "EmpropsModelDownloaderClipVision": EmpropsModelDownloaderClipVision,
+    "EmProps_Text_S3_Saver": EmProps_Text_S3_Saver,
 }
 print(f"[EmProps] Total nodes: {len(NODE_CLASS_MAPPINGS)}")
 
@@ -33,6 +41,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "EmProps_S3_Saver": "EmProps S3 Saver",
     "EmProps_Image_Loader": "EmProps Image Loader",
     "EmpropsModelDownloader": "Emprops Model Downloader",
+    "EmpropsModelDownloaderCheckpoint": "Emprops Checkpoint Downloader",
+    "EmpropsModelDownloaderClip": "Emprops Clip Downloader",
+    "EmpropsModelDownloaderClipVision": "Emprops ClipVision Downloader",
+    "EmProps_Text_S3_Saver": "EmProps Text S3 Saver",
 }
 print(f"[EmProps] Display names registered: {len(NODE_DISPLAY_NAME_MAPPINGS)}")
 

@@ -8,11 +8,10 @@ from ..utils import S3Handler
 import tqdm
 
 # Clear caches before class definition
-folder_paths.cache_helper.clear()
-folder_paths.filename_list_cache.clear()
 
 
-class EmpropsModelDownloader:
+class EmpropsModelDownloaderClip:
+    
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -27,11 +26,9 @@ class EmpropsModelDownloader:
                 # S3 input
                 "s3_bucket": ("STRING", {
                     "default": "emprops-share"
-                }),
-                "target_directory": ("STRING", {"default": ""})
+                })
             }
         }
-
     @classmethod
     def IS_CHANGED(cls, source_type, **kwargs):
         return float("NaN")  # So it always updates
@@ -41,11 +38,12 @@ class EmpropsModelDownloader:
     FUNCTION = "run"
     CATEGORY = "EmProps/Loaders"
 
-    def run(self, source_type, filename, url, s3_bucket, target_directory=None):
-        print("*********************RETURN TYPE =")
-        if not target_directory:
-            raise ValueError("Must specify target_directory")
-            
+    def run(self, source_type, filename, url, s3_bucket):
+        folder_paths.cache_helper.clear()
+        folder_paths.filename_list_cache.clear()
+        self.RETURN_TYPES = (folder_paths.get_filename_list("text_encoders"),)
+        print(f"A ~~~~~~~~~~~~~~~~~~~~RETURN TYPE ={self.RETURN_TYPES}")
+        
         # Hide fields based on source type
         if source_type == "url":
             if not url:
@@ -57,12 +55,7 @@ class EmpropsModelDownloader:
             url = None  # Hide url field
             
         # Get the base models directory by getting any model path and going up two levels
-        model_type_path = folder_paths.get_folder_paths("checkpoints")[0]  # Get first checkpoint path
-        base_models_dir = os.path.dirname(os.path.dirname(model_type_path))  # Go up two levels to get base models dir
-        print(f"[EmProps] Base models dir: {base_models_dir}")
-        
-        # Construct the output path
-        output_dir = os.path.join(base_models_dir, target_directory)
+        output_dir = folder_paths.get_folder_paths("clip")[0]  # Get first checkpoint path
         print(f"[EmProps] Output dir: {output_dir}")
         output_path = os.path.join(output_dir, filename)
         
@@ -82,14 +75,14 @@ class EmpropsModelDownloader:
                 s3_handler = S3Handler(s3_bucket)
                 
                 # Construct and verify the S3 key
-                s3_key = f"models/{target_directory}/{filename}"
+                s3_key = f"models/clip/{filename}"
                 
                 # Check if the object exists before attempting download
                 if not s3_handler.object_exists(s3_key):
                     # Try without models/ prefix as fallback
-                    s3_key = f"{target_directory}/{filename}"
+                    s3_key = f"clip/{filename}"
                     if not s3_handler.object_exists(s3_key):
-                        raise ValueError(f"File not found in S3. Tried:\n1. s3://{s3_bucket}/models/{target_directory}/{filename}\n2. s3://{s3_bucket}/{target_directory}/{filename}")
+                        raise ValueError(f"File not found in S3. Tried:\n1. s3://{s3_bucket}/models/clip/{filename}\n2. s3://{s3_bucket}/clip/{filename}")
                 
                 # Create directory if it doesn't exist
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -101,7 +94,8 @@ class EmpropsModelDownloader:
                 
                 if not os.path.exists(output_path):
                     raise ValueError("File was not downloaded successfully")
-                    
+                folder_paths.cache_helper.clear()
+                folder_paths.filename_list_cache.clear()    
                 print(f"[EmProps] Successfully downloaded model to: {output_path}")
             except Exception as e:
                 raise ValueError(f"S3 download failed: {str(e)}")

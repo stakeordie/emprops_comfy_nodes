@@ -226,6 +226,24 @@ class S3Handler:
         except Exception as e:
             return False, str(e)
 
+    def object_exists(self, s3_key: str) -> bool:
+        """
+        Check if an object exists in the S3 bucket
+        
+        Args:
+            s3_key: S3 object key to check
+            
+        Returns:
+            bool: True if object exists, False otherwise
+        """
+        try:
+            s3_url = f"s3://{self.bucket_name}/{s3_key}"
+            print(f"[EmProps] Checking if file exists at: {s3_url}")
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=s3_key)
+            return True
+        except Exception:
+            return False
+
     def download_file(self, s3_key: str, local_path: str) -> Tuple[bool, str]:
         """
         Download a file from S3 bucket
@@ -238,17 +256,14 @@ class S3Handler:
             Tuple[bool, str]: (success, error_message)
         """
         try:
-            # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            
-            # Download file
-            self.s3_client.download_file(self.bucket_name, s3_key, local_path)
-            
-            if not os.path.exists(local_path):
-                return False, "Failed to download file"
-                
+            s3_url = f"s3://{self.bucket_name}/{s3_key}"
+            print(f"[EmProps] Downloading from: {s3_url}")
+            self.s3_client.download_file(
+                Bucket=self.bucket_name,
+                Key=s3_key,
+                Filename=local_path
+            )
             return True, ""
-            
         except Exception as e:
             return False, str(e)
 

@@ -36,7 +36,7 @@ class EmpropsModelDownloader:
     def IS_CHANGED(cls, source_type, **kwargs):
         return float("NaN")  # So it always updates
 
-    RETURN_TYPES = (folder_paths.get_filename_list("text_encoders"),)
+    RETURN_TYPES = (folder_paths.get_filename_list("text_encoders").__class__,)
     RETURN_NAMES = ("FILENAME",)
     FUNCTION = "run"
     CATEGORY = "EmProps/Loaders"

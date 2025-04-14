@@ -1,5 +1,5 @@
 import os
-import folder_paths
+import folder_paths  # type: ignore # Custom module without stubs
 import json
 import requests
 import boto3

@@ -1,17 +1,26 @@
 import base64
 import os
 import urllib.parse
-import requests
-import folder_paths
-import boto3
-from typing import Optional, Tuple, List
+import requests  # type: ignore # Will be fixed with types-requests
+import folder_paths  # type: ignore # Custom module without stubs
+import boto3  # type: ignore # Will be fixed with types-boto3
+from typing import Optional, Tuple, List, Any, Dict, Union
 from dotenv import load_dotenv
-import piexif
+import piexif  # type: ignore # No stubs available
 import json
 import mimetypes
 from PIL.PngImagePlugin import PngImageFile
 from PIL.JpegImagePlugin import JpegImageFile
 from PIL import Image
+
+# Import Google Cloud Storage client library
+try:
+    from google.cloud import storage  # type: ignore # No stubs available
+    from google.oauth2 import service_account  # type: ignore # No stubs available
+    GCS_AVAILABLE = True
+except ImportError:
+    GCS_AVAILABLE = False
+    print("[EmProps] Google Cloud Storage not available. Install with 'pip install google-cloud-storage'")
 
 def unescape_env_value(encoded_value):
     """
@@ -293,6 +302,119 @@ class S3Handler:
             
         except Exception as e:
             print(f"Error listing S3 files: {str(e)}")
+            return []
+
+
+class GCSHandler:
+    def __init__(self, bucket_name: Optional[str] = None):
+        self.bucket_name = bucket_name or "emprops-share"
+        
+        # First try system environment for service account key path
+        credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+        
+        # If not found, try .env and .env.local files
+        if not credentials_path:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            # Try .env first
+            env_path = os.path.join(current_dir, '.env')
+            if os.path.exists(env_path):
+                load_dotenv(env_path)
+                credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
+            
+            # If still not found, try .env.local
+            if not credentials_path:
+                env_local_path = os.path.join(current_dir, '.env.local')
+                if os.path.exists(env_local_path):
+                    load_dotenv(env_local_path)
+                    credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
+        
+        # Check if credentials are available
+        if not credentials_path:
+            print("[EmProps] Warning: GOOGLE_APPLICATION_CREDENTIALS not set. GCS operations may fail.")
+            # Initialize client without explicit credentials (will use default if available)
+            self.gcs_client = storage.Client() if GCS_AVAILABLE else None
+        else:
+            # Initialize client with credentials from file
+            try:
+                credentials = service_account.Credentials.from_service_account_file(credentials_path)
+                self.gcs_client = storage.Client(credentials=credentials) if GCS_AVAILABLE else None
+            except Exception as e:
+                print(f"[EmProps] Error initializing GCS client: {str(e)}")
+                self.gcs_client = None
+
+    def object_exists(self, gcs_key: str) -> bool:
+        """
+        Check if an object exists in the GCS bucket
+        
+        Args:
+            gcs_key: GCS object key to check
+            
+        Returns:
+            bool: True if object exists, False otherwise
+        """
+        try:
+            if not self.gcs_client:
+                return False
+                
+            gcs_url = f"gs://{self.bucket_name}/{gcs_key}"
+            print(f"[EmProps] Checking if file exists at: {gcs_url}")
+            bucket = self.gcs_client.bucket(self.bucket_name)
+            blob = bucket.blob(gcs_key)
+            return blob.exists()
+        except Exception as e:
+            print(f"[EmProps] Error checking GCS object: {str(e)}")
+            return False
+
+    def download_file(self, gcs_key: str, local_path: str) -> Tuple[bool, str]:
+        """
+        Download a file from GCS bucket
+        
+        Args:
+            gcs_key: GCS object key
+            local_path: Local path to save the file
+            
+        Returns:
+            Tuple[bool, str]: (success, error_message)
+        """
+        try:
+            if not self.gcs_client:
+                return False, "GCS client not initialized"
+                
+            gcs_url = f"gs://{self.bucket_name}/{gcs_key}"
+            print(f"[EmProps] Downloading from: {gcs_url}")
+            
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            
+            bucket = self.gcs_client.bucket(self.bucket_name)
+            blob = bucket.blob(gcs_key)
+            blob.download_to_filename(local_path)
+            
+            return True, ""
+        except Exception as e:
+            return False, str(e)
+
+    def list_files(self, prefix: Optional[str] = None) -> List[str]:
+        """
+        List files in GCS bucket with optional prefix
+        
+        Args:
+            prefix: Optional prefix to filter files
+            
+        Returns:
+            List[str]: List of GCS keys
+        """
+        try:
+            if not self.gcs_client:
+                return []
+                
+            bucket = self.gcs_client.bucket(self.bucket_name)
+            blobs = bucket.list_blobs(prefix=prefix)
+            
+            return [blob.name for blob in blobs]
+        except Exception as e:
+            print(f"[EmProps] Error listing GCS files: {str(e)}")
             return []
 
 # Initialize mimetypes with common image formats

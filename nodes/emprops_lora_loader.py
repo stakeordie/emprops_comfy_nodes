@@ -3,7 +3,7 @@ import requests
 import sys
 import time
 from tqdm import tqdm
-import folder_paths
+import folder_paths  # type: ignore # Custom module without stubs
 from nodes import LoraLoader
 from dotenv import load_dotenv
 from ..utils import unescape_env_value, S3Handler

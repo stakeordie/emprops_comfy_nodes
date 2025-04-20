@@ -8,7 +8,7 @@ from .helpers.image_save_helper import ImageSaveHelper
 
 # Added: 2025-04-20T19:21:11-04:00 - Updated to support multiple cloud providers
 
-class EmProps_Cloud_Storage_Saver:
+class EmpropsCloudStorageSaver:
     """
     Node for saving files to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with dynamic prefix support
     """
@@ -327,10 +327,5 @@ class EmProps_Cloud_Storage_Saver:
             raise e
 
 
-# Added: 2025-04-20T19:21:11-04:00 - Backward compatibility class
-class EmProps_S3_Saver(EmProps_Cloud_Storage_Saver):
-    """
-    Legacy class for backward compatibility with existing workflows.
-    This is an alias for EmProps_Cloud_Storage_Saver.
-    """
-    pass
+# Added: 2025-04-20T19:41:30-04:00 - Removed backward compatibility class
+# The backward compatibility is now handled through NODE_CLASS_MAPPINGS in __init__.py

@@ -2,7 +2,7 @@ import os
 import sys
 import folder_paths
 from .nodes.emprops_lora_loader import EmProps_Lora_Loader
-from .nodes.emprops_s3_saver import EmProps_S3_Saver
+from .nodes.emprops_cloud_storage_saver import EmpropsCloudStorageSaver
 from .nodes.emprops_image_loader import EmpropsImageLoader
 from .nodes.emprops_model_downloader import EmpropsModelDownloader
 from .nodes.emprops_model_downloader_checkpoint import EmpropsModelDownloaderCheckpoint
@@ -19,14 +19,17 @@ print("[EmProps] Loading EmProps nodes")
 print(f"[EmProps] Current directory: {os.path.dirname(os.path.abspath(__file__))}")
 
 # Debug: Print node class details
-for name, cls in [(name, globals()[name]) for name in ['EmProps_Lora_Loader', 'EmProps_S3_Saver', 'EmpropsImageLoader', 'EmpropsModelDownloader']]:
+# Updated: 2025-04-20T19:41:30-04:00 - Updated to use new class name
+for name, cls in [(name, globals()[name]) for name in ['EmProps_Lora_Loader', 'EmpropsCloudStorageSaver', 'EmpropsImageLoader', 'EmpropsModelDownloader']]:
     print(f"[EmProps] Node class {name}:")
     print(f"  - RETURN_TYPES: {getattr(cls, 'RETURN_TYPES', None)}")
     print(f"  - INPUT_TYPES: {getattr(cls, 'INPUT_TYPES', None)}")
 
+# Updated: 2025-04-20T19:41:30-04:00 - Added backward compatibility for old node name
 NODE_CLASS_MAPPINGS = {
     "EmProps_Lora_Loader": EmProps_Lora_Loader,
-    "EmProps_S3_Saver": EmProps_S3_Saver,
+    "EmProps_Cloud_Storage_Saver": EmpropsCloudStorageSaver,
+    "EmProps_S3_Saver": EmpropsCloudStorageSaver,  # Backward compatibility
     "EmProps_Image_Loader": EmpropsImageLoader,
     "EmpropsModelDownloader": EmpropsModelDownloader,
     "EmpropsModelDownloaderCheckpoint": EmpropsModelDownloaderCheckpoint,
@@ -38,7 +41,8 @@ print(f"[EmProps] Total nodes: {len(NODE_CLASS_MAPPINGS)}")
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "EmProps_Lora_Loader": "EmProps LoRA Loader",
-    "EmProps_S3_Saver": "EmProps S3 Saver",
+    "EmProps_Cloud_Storage_Saver": "EmProps Cloud Storage Saver",
+    "EmProps_S3_Saver": "EmProps S3 Saver (Legacy)",  # Backward compatibility
     "EmProps_Image_Loader": "EmProps Image Loader",
     "EmpropsModelDownloader": "Emprops Model Downloader",
     "EmpropsModelDownloaderCheckpoint": "Emprops Checkpoint Downloader",

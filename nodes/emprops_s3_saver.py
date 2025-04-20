@@ -3,13 +3,16 @@ import boto3  # type: ignore # Will be fixed with types-boto3
 import folder_paths  # type: ignore # Custom module without stubs
 from dotenv import load_dotenv
 from typing import Optional, Tuple, List, Dict, Any
-from ..utils import unescape_env_value, S3Handler, GCSHandler, GCS_AVAILABLE
+from ..utils import unescape_env_value, S3Handler, GCSHandler, AzureHandler, GCS_AVAILABLE, AZURE_AVAILABLE
 from .helpers.image_save_helper import ImageSaveHelper
 
-class EmProps_S3_Saver:
+# Added: 2025-04-20T19:21:11-04:00 - Updated to support multiple cloud providers
+
+class EmProps_Cloud_Storage_Saver:
     """
-    Node for saving files to cloud storage (AWS S3 or Google Cloud Storage) with dynamic prefix support
+    Node for saving files to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with dynamic prefix support
     """
+    # Updated: 2025-04-20T19:21:11-04:00 - Renamed from EmProps_S3_Saver and added Azure support
     def __init__(self):
         # Initialize common properties
         self.default_bucket = "emprops-share"
@@ -24,6 +27,13 @@ class EmProps_S3_Saver:
             print("[EmProps] Google Cloud Storage support is available")
         else:
             print("[EmProps] Google Cloud Storage support is not available. Install with 'pip install google-cloud-storage'")
+            
+        # Check if Azure Blob Storage is available
+        self.azure_available = AZURE_AVAILABLE
+        if self.azure_available:
+            print("[EmProps] Azure Blob Storage support is available")
+        else:
+            print("[EmProps] Azure Blob Storage support is not available. Install with 'pip install azure-storage-blob'")
         
         # First try system environment for AWS credentials
         self.aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
@@ -69,6 +79,13 @@ class EmProps_S3_Saver:
         self.gcs_credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
         if not self.gcs_credentials_path and self.gcs_available:
             print("[EmProps] Warning: GOOGLE_APPLICATION_CREDENTIALS not found in environment")
+            
+        # Check for Azure credentials
+        self.azure_account_name = os.getenv('AZURE_STORAGE_ACCOUNT')
+        self.azure_account_key = os.getenv('AZURE_STORAGE_KEY')
+        self.azure_container = os.getenv('AZURE_STORAGE_CONTAINER', 'test')
+        if (not self.azure_account_name or not self.azure_account_key) and self.azure_available:
+            print("[EmProps] Warning: Azure credentials not found in environment")
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -76,6 +93,8 @@ class EmProps_S3_Saver:
         providers = ["aws"]
         if GCS_AVAILABLE:
             providers.append("google")
+        if AZURE_AVAILABLE:
+            providers.append("azure")
             
         return {
             "required": {
@@ -95,7 +114,7 @@ class EmProps_S3_Saver:
     FUNCTION = "save_to_cloud"
     CATEGORY = "EmProps"
     OUTPUT_NODE = True
-    DESCRIPTION = "Saves the input images to cloud storage (AWS S3 or Google Cloud Storage) with configurable bucket and prefix and displays them in the UI."
+    DESCRIPTION = "Saves the input images to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with configurable bucket and prefix and displays them in the UI."
 
     def verify_s3_upload(self, s3_client, bucket: str, key: str, max_attempts: int = 5, delay: int = 1) -> bool:
         """Verify that a file exists in S3 by checking with head_object"""
@@ -138,7 +157,7 @@ class EmProps_S3_Saver:
         return False
 
     def save_to_cloud(self, images, provider, prefix, filename, bucket, prompt=None, extra_pnginfo=None):
-        """Save images to cloud storage (AWS S3 or Google Cloud Storage) with the specified prefix and filename"""
+        """Save images to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with the specified prefix and filename"""
         # Log the provider for debugging
         print(f"[EmProps] Using cloud provider: {provider}")
         try:
@@ -265,9 +284,53 @@ class EmProps_S3_Saver:
                     except Exception as e:
                         print(f"[EmProps] Error uploading to GCS: {str(e)}", flush=True)
                         raise e
+                        
+                elif provider == "azure":
+                    if not self.azure_available:
+                        raise ValueError("Azure Blob Storage is not available. Install with 'pip install azure-storage-blob'")
+                        
+                    print(f"[EmProps] Uploading to Azure Blob Storage: {bucket}/{storage_key}", flush=True)
+                    
+                    try:
+                        # Initialize Azure handler
+                        azure_handler = AzureHandler(bucket)
+                        
+                        # Create a temporary file to upload
+                        import tempfile
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(current_filename)[1]) as temp_file:
+                            temp_path = temp_file.name
+                            image_bytes.seek(0)
+                            temp_file.write(image_bytes.read())
+                            
+                        # Upload the file
+                        blob_client = azure_handler.container_client.get_blob_client(storage_key)
+                        with open(temp_path, "rb") as data:
+                            blob_client.upload_blob(data, overwrite=True, content_settings={"content_type": mime_type})
+                        
+                        # Clean up temp file
+                        os.unlink(temp_path)
+                        
+                        # Verify upload
+                        if azure_handler.object_exists(storage_key):
+                            saved.append(current_filename)
+                            print(f"[EmProps] Successfully uploaded and verified: {bucket}/{storage_key}", flush=True)
+                        else:
+                            print(f"[EmProps] Failed to verify upload: {bucket}/{storage_key}", flush=True)
+                    except Exception as e:
+                        print(f"[EmProps] Error uploading to Azure: {str(e)}", flush=True)
+                        raise e
             
             return self.image_helper.format_ui_response(saved, prefix, self.type)
             
         except Exception as e:
-            print(f"[EmProps] Error saving to S3: {str(e)}", flush=True)
+            print(f"[EmProps] Error saving to cloud storage: {str(e)}", flush=True)
             raise e
+
+
+# Added: 2025-04-20T19:21:11-04:00 - Backward compatibility class
+class EmProps_S3_Saver(EmProps_Cloud_Storage_Saver):
+    """
+    Legacy class for backward compatibility with existing workflows.
+    This is an alias for EmProps_Cloud_Storage_Saver.
+    """
+    pass

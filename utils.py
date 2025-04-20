@@ -22,6 +22,15 @@ except ImportError:
     GCS_AVAILABLE = False
     print("[EmProps] Google Cloud Storage not available. Install with 'pip install google-cloud-storage'")
 
+# Import Azure Blob Storage client library
+# Added: 2025-04-13T21:28:00-04:00 - Azure Blob Storage support
+try:
+    from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+    AZURE_AVAILABLE = True
+except ImportError:
+    AZURE_AVAILABLE = False
+    print("[EmProps] Azure Blob Storage not available. Install with 'pip install azure-storage-blob'")
+
 def unescape_env_value(encoded_value):
     """
     Unescapes a base64 encoded environment variable value.
@@ -415,6 +424,109 @@ class GCSHandler:
             return [blob.name for blob in blobs]
         except Exception as e:
             print(f"[EmProps] Error listing GCS files: {str(e)}")
+            return []
+
+# Added: 2025-04-13T21:30:00-04:00 - Azure Blob Storage handler implementation
+class AzureHandler:
+    def __init__(self, container_name: Optional[str] = None):
+        self.container_name = container_name or os.getenv('AZURE_STORAGE_CONTAINER', 'test')
+        
+        # Get credentials from environment
+        self.account_name = os.getenv('AZURE_STORAGE_ACCOUNT')
+        self.account_key = os.getenv('AZURE_STORAGE_KEY')
+        
+        # Check for test mode
+        # Updated: 2025-04-14T09:45:00-04:00 - Made environment variables provider-agnostic
+        self.test_mode = os.getenv('STORAGE_TEST_MODE', os.getenv('AZURE_TEST_MODE', 'false')).lower() == 'true'
+        if self.test_mode:
+            self.container_name = f"{self.container_name}-test"
+            print(f"[EmProps] Using test container: {self.container_name}")
+        
+        # Validate credentials
+        if not all([self.account_name, self.account_key]):
+            missing = []
+            if not self.account_name: missing.append('AZURE_STORAGE_ACCOUNT')
+            if not self.account_key: missing.append('AZURE_STORAGE_KEY')
+            raise ValueError(f"Missing required Azure environment variables: {', '.join(missing)}")
+        
+        # Initialize Azure Blob Service client
+        connection_string = f"DefaultEndpointsProtocol=https;AccountName={self.account_name};AccountKey={self.account_key};EndpointSuffix=core.windows.net"
+        self.blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+        self.container_client = self.blob_service_client.get_container_client(self.container_name)
+        
+        # Create container if it doesn't exist
+        try:
+            container_properties = self.container_client.get_container_properties()
+            print(f"[EmProps] Using existing Azure container: {self.container_name}")
+        except Exception as e:
+            try:
+                print(f"[EmProps] Creating Azure container: {self.container_name}")
+                self.container_client.create_container()
+            except Exception as create_error:
+                print(f"[EmProps] Warning: Could not create Azure container: {str(create_error)}")
+    
+    def object_exists(self, blob_name: str) -> bool:
+        """
+        Check if a blob exists in the Azure container
+        
+        Args:
+            blob_name: Azure blob name to check
+            
+        Returns:
+            bool: True if blob exists, False otherwise
+        """
+        try:
+            blob_client = self.container_client.get_blob_client(blob_name)
+            return blob_client.exists()
+        except Exception as e:
+            print(f"[EmProps] Error checking Azure blob: {str(e)}")
+            return False
+    
+    def download_file(self, blob_name: str, local_path: str) -> Tuple[bool, str]:
+        """
+        Download a file from Azure Blob Storage
+        
+        Args:
+            blob_name: Azure blob name
+            local_path: Local path to save the file
+            
+        Returns:
+            Tuple[bool, str]: (success, error_message)
+        """
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            
+            # Get blob client
+            blob_client = self.container_client.get_blob_client(blob_name)
+            
+            # Check if blob exists
+            if not blob_client.exists():
+                return False, f"Blob not found: {blob_name}"
+            
+            # Download the blob
+            with open(local_path, "wb") as download_file:
+                download_file.write(blob_client.download_blob().readall())
+            
+            return True, ""
+        except Exception as e:
+            return False, str(e)
+    
+    def list_files(self, prefix: Optional[str] = None) -> List[str]:
+        """
+        List files in Azure container with optional prefix
+        
+        Args:
+            prefix: Optional prefix to filter files
+            
+        Returns:
+            List[str]: List of blob names
+        """
+        try:
+            blobs = self.container_client.list_blobs(name_starts_with=prefix)
+            return [blob.name for blob in blobs]
+        except Exception as e:
+            print(f"[EmProps] Error listing Azure blobs: {str(e)}")
             return []
 
 # Initialize mimetypes with common image formats

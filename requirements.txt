@@ -1,5 +1,7 @@
 boto3>=1.26.0
 google-cloud-storage>=2.10.0
+# Added: 2025-04-13T21:50:00-04:00 - Azure Blob Storage SDK
+azure-storage-blob>=12.17.0
 tqdm>=4.65.0
 requests>=2.31.0
 python-dotenv>=0.19.0

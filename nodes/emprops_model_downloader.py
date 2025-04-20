@@ -4,7 +4,8 @@ import json
 import requests  # type: ignore # Will be fixed with types-requests
 import boto3  # type: ignore # Will be fixed with types-boto3
 import botocore  # type: ignore # Will be fixed with types-boto3
-from ..utils import S3Handler, GCSHandler, GCS_AVAILABLE
+# Added: 2025-04-13T21:35:00-04:00 - Azure Blob Storage support
+from ..utils import S3Handler, GCSHandler, GCS_AVAILABLE, AzureHandler, AZURE_AVAILABLE
 import tqdm  # type: ignore # Will be fixed with types-tqdm
 
 # Clear caches before class definition
@@ -46,6 +47,9 @@ class EmpropsModelDownloader:
         source_types = ["url", "s3"]
         if GCS_AVAILABLE:
             source_types.append("gcs")
+        # Added: 2025-04-13T21:36:00-04:00 - Azure Blob Storage support
+        if AZURE_AVAILABLE:
+            source_types.append("azure")
         
         # Log INPUT_TYPES for debugging
         input_types = {
@@ -64,6 +68,10 @@ class EmpropsModelDownloader:
                 # GCS input
                 "gcs_bucket": ("STRING", {
                     "default": "emprops-share"
+                }),
+                # Azure input
+                "azure_container": ("STRING", {
+                    "default": os.getenv('AZURE_STORAGE_CONTAINER', 'test')
                 }),
                 "target_directory": ("STRING", {"default": ""})
             }
@@ -90,28 +98,39 @@ class EmpropsModelDownloader:
     print(f"[EmProps] Example return value type: {type(folder_paths.get_filename_list('text_encoders'))}")
     print(f"[EmProps] Example return value: {folder_paths.get_filename_list('text_encoders')}")
 
-    def run(self, source_type, filename, url, s3_bucket, gcs_bucket=None, target_directory=None):
+    # Updated: 2025-04-13T21:40:00-04:00 - Added Azure Blob Storage support
+    def run(self, source_type, filename, url, s3_bucket, gcs_bucket=None, azure_container=None, target_directory=None):
         print("*********************RETURN TYPE DEBUGGING*********************")
         print(f"[EmProps] Expected return type: {self.RETURN_TYPES}")
         if not target_directory:
             raise ValueError("Must specify target_directory")
             
         # Hide fields based on source type
+        # Updated: 2025-04-13T21:42:00-04:00 - Added Azure Blob Storage support
         if source_type == "url":
             if not url:
                 raise ValueError("URL is required when using URL source type")
             s3_bucket = None  # Hide s3 field
             gcs_bucket = None  # Hide gcs field
+            azure_container = None  # Hide azure field
         elif source_type == "s3":
             if not filename:
                 raise ValueError("Filename is required when using S3 source type")
             url = None  # Hide url field
             gcs_bucket = None  # Hide gcs field
+            azure_container = None  # Hide azure field
         elif source_type == "gcs":
             if not filename:
                 raise ValueError("Filename is required when using GCS source type")
             url = None  # Hide url field
             s3_bucket = None  # Hide s3 field
+            azure_container = None  # Hide azure field
+        elif source_type == "azure":
+            if not filename:
+                raise ValueError("Filename is required when using Azure source type")
+            url = None  # Hide url field
+            s3_bucket = None  # Hide s3 field
+            gcs_bucket = None  # Hide gcs field
             
         # Get the base models directory by getting any model path and going up two levels
         model_type_path = folder_paths.get_folder_paths("checkpoints")[0]  # Get first checkpoint path
@@ -216,6 +235,40 @@ class EmpropsModelDownloader:
                 print(f"[EmProps] Successfully downloaded model to: {output_path}")
             except Exception as e:
                 raise ValueError(f"GCS download failed: {str(e)}")
+        # Added: 2025-04-13T21:45:00-04:00 - Azure Blob Storage download implementation
+        elif source_type == "azure":
+            try:
+                if not AZURE_AVAILABLE:
+                    raise ValueError("Azure Blob Storage is not available. Install with 'pip install azure-storage-blob'")
+                    
+                print(f"[EmProps] Preparing to download from Azure container: {azure_container}")
+                # Initialize Azure handler with proper credential management
+                azure_handler = AzureHandler(azure_container)
+                
+                # Construct and verify the Azure blob name
+                azure_blob = f"models/{target_directory}/{filename}"
+                
+                # Check if the blob exists before attempting download
+                if not azure_handler.object_exists(azure_blob):
+                    # Try without models/ prefix as fallback
+                    azure_blob = f"{target_directory}/{filename}"
+                    if not azure_handler.object_exists(azure_blob):
+                        raise ValueError(f"File not found in Azure. Tried:\n1. {azure_container}/models/{target_directory}/{filename}\n2. {azure_container}/{target_directory}/{filename}")
+                
+                # Create directory if it doesn't exist
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                
+                print(f"[EmProps] Found file in Azure, downloading to: {output_path}")
+                success, error = azure_handler.download_file(azure_blob, output_path)
+                if not success:
+                    raise ValueError(f"Download failed: {error}")
+                
+                if not os.path.exists(output_path):
+                    raise ValueError("File was not downloaded successfully")
+                    
+                print(f"[EmProps] Successfully downloaded model to: {output_path}")
+            except Exception as e:
+                raise ValueError(f"Azure download failed: {str(e)}")
         else:  # url
             print(f"[EmProps] Downloading model from URL: {url}")
             response = requests.get(url, stream=True)

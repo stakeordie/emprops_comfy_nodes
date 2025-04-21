@@ -12,13 +12,10 @@ def log_debug(message):
     file = os.path.basename(caller.filename)
     line = caller.lineno
     print(f"[EmProps DEBUG {timestamp}] [{file}:{line}] {message}", flush=True)
+# Added: 2025-04-20T21:57:24-04:00 - Removed model downloader nodes
 from .nodes.emprops_lora_loader import EmProps_Lora_Loader
 from .nodes.emprops_cloud_storage_saver import EmpropsCloudStorageSaver
 from .nodes.emprops_image_loader import EmpropsImageLoader
-from .nodes.emprops_model_downloader import EmpropsModelDownloader
-from .nodes.emprops_model_downloader_checkpoint import EmpropsModelDownloaderCheckpoint
-from .nodes.emprops_model_downloader_clip import EmpropsModelDownloaderClip
-from .nodes.emprops_model_downloader_clip_vision import EmpropsModelDownloaderClipVision
 from .nodes.emprops_text_s3_saver import EmProps_Text_S3_Saver
 
 log_debug("Starting EmProps initialization")
@@ -62,14 +59,11 @@ except Exception as e:
 log_debug("Creating NODE_CLASS_MAPPINGS dictionary")
 try:
     NODE_CLASS_MAPPINGS = {
+    # Added: 2025-04-20T21:57:24-04:00 - Removed model downloader nodes
     "EmProps_Lora_Loader": EmProps_Lora_Loader,
     "EmProps_Cloud_Storage_Saver": EmpropsCloudStorageSaver,
     "EmProps_S3_Saver": EmpropsCloudStorageSaver,  # Backward compatibility
     "EmProps_Image_Loader": EmpropsImageLoader,
-    "EmpropsModelDownloader": EmpropsModelDownloader,
-    "EmpropsModelDownloaderCheckpoint": EmpropsModelDownloaderCheckpoint,
-    "EmpropsModelDownloaderClip": EmpropsModelDownloaderClip,
-    "EmpropsModelDownloaderClipVision": EmpropsModelDownloaderClipVision,
     "EmProps_Text_S3_Saver": EmProps_Text_S3_Saver,
 }
     log_debug(f"NODE_CLASS_MAPPINGS created successfully with {len(NODE_CLASS_MAPPINGS)} entries")
@@ -81,14 +75,11 @@ except Exception as e:
 try:
     log_debug("Creating NODE_DISPLAY_NAME_MAPPINGS dictionary")
     NODE_DISPLAY_NAME_MAPPINGS = {
+    # Added: 2025-04-20T21:57:24-04:00 - Removed model downloader nodes
     "EmProps_Lora_Loader": "EmProps LoRA Loader",
     "EmProps_Cloud_Storage_Saver": "EmProps Cloud Storage Saver",
     "EmProps_S3_Saver": "EmProps S3 Saver (Legacy)",  # Backward compatibility
     "EmProps_Image_Loader": "EmProps Image Loader",
-    "EmpropsModelDownloader": "Emprops Model Downloader",
-    "EmpropsModelDownloaderCheckpoint": "Emprops Checkpoint Downloader",
-    "EmpropsModelDownloaderClip": "Emprops Clip Downloader",
-    "EmpropsModelDownloaderClipVision": "Emprops ClipVision Downloader",
     "EmProps_Text_S3_Saver": "EmProps Text S3 Saver",
 }
     log_debug(f"NODE_DISPLAY_NAME_MAPPINGS created successfully with {len(NODE_DISPLAY_NAME_MAPPINGS)} entries")

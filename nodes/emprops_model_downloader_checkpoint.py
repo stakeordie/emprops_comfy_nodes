@@ -10,7 +10,7 @@ import time
 from ..utils import S3Handler
 import tqdm
 
-# Added: 2025-04-20T19:47:26-04:00 - Enhanced logging for debugging
+# Added: 2025-04-20T21:33:36-04:00 - Enhanced logging for debugging
 def log_debug(message):
     """Enhanced logging function with timestamp and stack info"""
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -68,12 +68,15 @@ class EmpropsModelDownloaderCheckpoint:
         log_debug(f"IS_CHANGED called with source_type: {source_type}")
         return float("NaN")  # So it always updates
 
-    RETURN_TYPES = (folder_paths.get_filename_list("checkpoints"),)
+    # Added: 2025-04-20T21:33:36-04:00 - Fixed return types to use string type instead of function
+    RETURN_TYPES = ("STRING",)
     
     @classmethod
     def __init_subclass__(cls, **kwargs):
         log_debug(f"EmpropsModelDownloaderCheckpoint subclass initialized: {cls.__name__}")
         super().__init_subclass__(**kwargs)
+        
+    # Added: 2025-04-20T21:33:36-04:00 - Organized class variables for better readability
     RETURN_NAMES = ("FILENAME",)
     FUNCTION = "run"
     CATEGORY = "EmProps/Loaders"
@@ -86,10 +89,10 @@ class EmpropsModelDownloaderCheckpoint:
             folder_paths.cache_helper.clear()
             folder_paths.filename_list_cache.clear()
             
-            # Get the current return types
-            current_return_types = folder_paths.get_filename_list("checkpoints")
-            log_debug(f"Current checkpoint files: {len(current_return_types)} files")
-            self.RETURN_TYPES = (current_return_types,)
+            # Get the current checkpoint files (for information only)
+            current_files = folder_paths.get_filename_list("checkpoints")
+            log_debug(f"Current checkpoint files: {len(current_files)} files")
+            # Don't modify RETURN_TYPES here - it should remain as ("STRING",)
 
 
             # Hide fields based on source type
@@ -113,25 +116,33 @@ class EmpropsModelDownloaderCheckpoint:
             output_dir = checkpoint_paths[0]  # Get first checkpoint path
             log_debug(f"Using output directory: {output_dir}")
             
+            # Create output path variable first so it's available to both download methods
+            output_path = os.path.join(output_dir, filename)
+            log_debug(f"Target output path: {output_path}")
+            
             # Download based on source type
             if source_type == "s3":
                 try:
-                    print(f"[EmProps] Preparing to download from S3 bucket: {s3_bucket}")
+                    log_debug(f"Preparing to download from S3 bucket: {s3_bucket}")
                     # Initialize S3 handler with proper credential management
                     s3_handler = S3Handler(s3_bucket)
                     
                     # Construct and verify the S3 key
                     s3_key = f"models/checkpoints/{filename}"
+                    log_debug(f"Trying S3 key: {s3_key}")
                     
                     # Check if the object exists before attempting download
                     if not s3_handler.object_exists(s3_key):
                         # Try without models/ prefix as fallback
                         s3_key = f"checkpoints/{filename}"
+                        log_debug(f"First key not found, trying fallback: {s3_key}")
                         if not s3_handler.object_exists(s3_key):
+                            log_debug(f"File not found in S3 with either key pattern")
                             raise ValueError(f"File not found in S3. Tried:\n1. s3://{s3_bucket}/models/checkpoints/{filename}\n2. s3://{s3_bucket}/checkpoints/{filename}")
                     
                     # Create directory if it doesn't exist
                     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                    log_debug(f"Created directory structure for: {output_path}")
                     
                     print(f"[EmProps] Found file in S3, downloading to: {output_path}")
                     success, error = s3_handler.download_file(s3_key, output_path)
@@ -211,7 +222,6 @@ class EmpropsModelDownloaderCheckpoint:
                     log_debug(f"ERROR downloading from URL: {str(e)}\n{traceback.format_exc()}")
                     raise
 
-            output_path = os.path.join(output_dir, filename)
             # Refresh the model list
             log_debug("Refreshing model list after download")
             folder_paths.cache_helper.clear()
@@ -230,8 +240,9 @@ class EmpropsModelDownloaderCheckpoint:
             log_debug(f"Updated checkpoint files: {len(updated_files)} files")
             log_debug(f"Is downloaded file in list: {filename in updated_files}")
             
-            # Return the filename
+            # Return the filename as a string
             log_debug(f"Returning filename: {filename}")
+            # Make sure we're returning a string, not a list or tuple of strings
             return (filename,)
         except Exception as e:
             log_debug(f"CRITICAL ERROR in run method: {str(e)}\n{traceback.format_exc()}")

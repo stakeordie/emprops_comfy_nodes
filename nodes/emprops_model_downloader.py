@@ -92,11 +92,10 @@ class EmpropsModelDownloader:
     FUNCTION = "run"
     CATEGORY = "EmProps/Loaders"
     
-    # Log RETURN_TYPES for debugging
-    print(f"[EmProps] RETURN_TYPES: {RETURN_TYPES}")
-    print(f"[EmProps] filename_list_type: {filename_list_type}")
-    print(f"[EmProps] Example return value type: {type(folder_paths.get_filename_list('text_encoders'))}")
-    print(f"[EmProps] Example return value: {folder_paths.get_filename_list('text_encoders')}")
+    # Added: 2025-04-20T21:52:16-04:00 - Updated debugging logs
+    print(f"[EmProps MODEL_DOWNLOADER] RETURN_TYPES: {RETURN_TYPES}")
+    print(f"[EmProps MODEL_DOWNLOADER] Example return value type: {type(folder_paths.get_filename_list('text_encoders'))}")
+    print(f"[EmProps MODEL_DOWNLOADER] Example return value count: {len(folder_paths.get_filename_list('text_encoders'))}")
 
     # Updated: 2025-04-13T21:40:00-04:00 - Added Azure Blob Storage support
     def run(self, source_type, filename, url, s3_bucket, gcs_bucket=None, azure_container=None, target_directory=None):

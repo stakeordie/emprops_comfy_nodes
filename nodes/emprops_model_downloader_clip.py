@@ -33,16 +33,25 @@ class EmpropsModelDownloaderClip:
     def IS_CHANGED(cls, source_type, **kwargs):
         return float("NaN")  # So it always updates
 
-    RETURN_TYPES = (folder_paths.get_filename_list("text_encoders"),)
+    # Added: 2025-04-20T21:41:04-04:00 - Fixed return types to use string type instead of function
+    # This must be a string type, not a function call or object
+    RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("FILENAME",)
     FUNCTION = "run"
     CATEGORY = "EmProps/Loaders"
 
     def run(self, source_type, filename, url, s3_bucket):
+        # Added: 2025-04-20T21:41:04-04:00 - Enhanced logging and fixed return types
+        print(f"[EmProps CLIP_DOWNLOADER] run method called with source_type={source_type}, filename={filename}")
+        
+        # Clear caches to ensure we get fresh file lists
         folder_paths.cache_helper.clear()
         folder_paths.filename_list_cache.clear()
-        self.RETURN_TYPES = (folder_paths.get_filename_list("text_encoders"),)
-        print(f"A ~~~~~~~~~~~~~~~~~~~~RETURN TYPE ={self.RETURN_TYPES}")
+        
+        # Get current files for debugging only
+        current_files = folder_paths.get_filename_list("text_encoders")
+        print(f"[EmProps CLIP_DOWNLOADER] Current text_encoder files: {len(current_files)} files")
+        # Don't modify RETURN_TYPES here - it should remain as ("STRING",)
         
         # Hide fields based on source type
         if source_type == "url":
@@ -62,7 +71,9 @@ class EmpropsModelDownloaderClip:
         # Check if file exists in target directory
         if os.path.exists(output_path):
             print(f"File {filename} already exists in {output_dir}")
-            return [filename]
+            # Added: 2025-04-20T21:41:04-04:00 - Return as tuple for consistency
+            print(f"[EmProps CLIP_DOWNLOADER] Returning existing filename: {filename}")
+            return (filename,)
         
         # Create directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -117,4 +128,6 @@ class EmpropsModelDownloaderClip:
             progress_bar.close()
             print(f"[EmProps] Successfully downloaded model to: {output_path}")
 
-        return [filename]
+        # Added: 2025-04-20T21:41:04-04:00 - Return as tuple for consistency
+        print(f"[EmProps CLIP_DOWNLOADER] Returning downloaded filename: {filename}")
+        return (filename,)

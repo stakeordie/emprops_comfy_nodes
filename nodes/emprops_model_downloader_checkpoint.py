@@ -68,7 +68,8 @@ class EmpropsModelDownloaderCheckpoint:
         log_debug(f"IS_CHANGED called with source_type: {source_type}")
         return float("NaN")  # So it always updates
 
-    # Added: 2025-04-20T21:33:36-04:00 - Fixed return types to use string type instead of function
+    # Added: 2025-04-20T21:41:04-04:00 - Fixed return types to use string type instead of function
+    # This must be a string type, not a function call or object
     RETURN_TYPES = ("STRING",)
     
     @classmethod

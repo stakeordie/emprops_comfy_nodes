@@ -31,16 +31,25 @@ class EmpropsModelDownloaderClipVision:
     def IS_CHANGED(cls, source_type, **kwargs):
         return float("NaN")  # So it always updates
     
-    RETURN_TYPES = (folder_paths.get_filename_list("clip_vision"),)
+    # Added: 2025-04-20T21:41:04-04:00 - Fixed return types to use string type instead of function
+    # This must be a string type, not a function call or object
+    RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("FILENAME",)
     FUNCTION = "run"
     CATEGORY = "EmProps/Loaders"
         
     def run(self, source_type, filename, url, s3_bucket):
-        print("TRY setting a getter method and having comfy callthat instead of getting the return type direclty from the class Private public style")
+        # Added: 2025-04-20T21:41:04-04:00 - Enhanced logging and fixed return types
+        print(f"[EmProps CLIP_VISION_DOWNLOADER] run method called with source_type={source_type}, filename={filename}")
+        
+        # Clear caches to ensure we get fresh file lists
         folder_paths.cache_helper.clear()
         folder_paths.filename_list_cache.clear()
-        self.RETURN_TYPES = (folder_paths.get_filename_list("clip_vision"),)
+        
+        # Get current files for debugging only
+        current_files = folder_paths.get_filename_list("clip_vision")
+        print(f"[EmProps CLIP_VISION_DOWNLOADER] Current clip_vision files: {len(current_files)} files")
+        # Don't modify RETURN_TYPES here - it should remain as ("STRING",)
             
         # Hide fields based on source type
         if source_type == "url":
@@ -60,7 +69,9 @@ class EmpropsModelDownloaderClipVision:
         # Check if file exists in target directory
         if os.path.exists(output_path):
             print(f"File {filename} already exists in {output_dir}")
-            return [filename]
+            # Added: 2025-04-20T21:44:24-04:00 - Return as tuple for consistency
+            print(f"[EmProps CLIP_VISION_DOWNLOADER] Returning existing filename: {filename}")
+            return (filename,)
         
         # Create directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -114,4 +125,6 @@ class EmpropsModelDownloaderClipVision:
             progress_bar.close()
             print(f"[EmProps] Successfully downloaded model to: {output_path}")
 
-        return [filename]
+        # Added: 2025-04-20T21:44:24-04:00 - Return as tuple for consistency
+        print(f"[EmProps CLIP_VISION_DOWNLOADER] Returning downloaded filename: {filename}")
+        return (filename,)

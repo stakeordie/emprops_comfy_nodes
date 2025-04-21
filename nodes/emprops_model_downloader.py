@@ -85,9 +85,9 @@ class EmpropsModelDownloader:
     def IS_CHANGED(cls, source_type, **kwargs):
         return float("NaN")  # So it always updates
 
-    # Get the return type from a working node for comparison
-    filename_list_type = folder_paths.get_filename_list("text_encoders").__class__
-    RETURN_TYPES = (filename_list_type,)
+    # Added: 2025-04-20T21:47:57-04:00 - Fixed return types to use string type instead of dynamic class
+    # This must be a string type, not a function call or object
+    RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("FILENAME",)
     FUNCTION = "run"
     CATEGORY = "EmProps/Loaders"
@@ -146,27 +146,10 @@ class EmpropsModelDownloader:
         if os.path.exists(output_path):
             print(f"File {filename} already exists in {output_dir}")
             
-            # Log early return value details for debugging
-            return_value = [filename]
-            print(f"[EmProps] Early return value: {return_value}")
-            print(f"[EmProps] Early return value type: {type(return_value)}")
-            print(f"[EmProps] Early return value element type: {type(return_value[0])}")
-            
-            # Check if our return type matches what ComfyUI expects
-            expected_type = folder_paths.get_filename_list("text_encoders").__class__
-            print(f"[EmProps] Is early return type matching expected? {type(return_value) == expected_type}")
-            
-            # Try to convert to the expected type if needed
-            if type(return_value) != expected_type and hasattr(expected_type, "__call__"):
-                try:
-                    converted_value = expected_type(return_value)
-                    print(f"[EmProps] Converted early value: {converted_value}")
-                    print(f"[EmProps] Converted early type: {type(converted_value)}")
-                    return converted_value
-                except Exception as e:
-                    print(f"[EmProps] Early conversion failed: {str(e)}")
-            
-            return return_value
+            # Added: 2025-04-20T21:47:57-04:00 - Return as tuple for consistency
+            print(f"[EmProps MODEL_DOWNLOADER] Returning existing filename: {filename}")
+            # Return as a tuple to match RETURN_TYPES = ("STRING",)
+            return (filename,)
         
         # Create directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
@@ -287,24 +270,9 @@ class EmpropsModelDownloader:
             progress_bar.close()
             print(f"[EmProps] Successfully downloaded model to: {output_path}")
 
-        # Log final return value details for debugging
-        return_value = [filename]
-        print(f"[EmProps] Final return value: {return_value}")
-        print(f"[EmProps] Final return value type: {type(return_value)}")
-        print(f"[EmProps] Final return value element type: {type(return_value[0])}")
-        
-        # Check if our return type matches what ComfyUI expects
-        expected_type = folder_paths.get_filename_list("text_encoders").__class__
-        print(f"[EmProps] Is final return type matching expected? {type(return_value) == expected_type}")
-        
-        # Try to convert to the expected type if needed
-        if type(return_value) != expected_type and hasattr(expected_type, "__call__"):
-            try:
-                converted_value = expected_type(return_value)
-                print(f"[EmProps] Converted final value: {converted_value}")
-                print(f"[EmProps] Converted final type: {type(converted_value)}")
-                return converted_value
-            except Exception as e:
-                print(f"[EmProps] Final conversion failed: {str(e)}")
-        
-        return return_value
+        # Added: 2025-04-20T21:47:57-04:00 - Return as tuple for consistency
+        print(f"[EmProps MODEL_DOWNLOADER] Returning downloaded filename: {filename}")
+        # Return as a tuple to match RETURN_TYPES = ("STRING",)
+        return (filename,)
+
+{{ ... }}

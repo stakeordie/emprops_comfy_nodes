@@ -4,19 +4,44 @@ import torch
 import numpy as np
 from PIL import Image, ImageOps, ImageSequence
 import folder_paths
-from ..utils import try_download_file, is_url, S3Handler, extract_metadata
+# 2025-04-27 20:59: Updated imports to support multiple cloud providers
+from ..utils import try_download_file, is_url, S3Handler, GCSHandler, AzureHandler, extract_metadata, GCS_AVAILABLE, AZURE_AVAILABLE
 
 class EmpropsImageLoader:
+    def __init__(self):
+        # 2025-04-27 21:00: Get default cloud provider from environment
+        self.default_provider = os.getenv('CLOUD_PROVIDER', 'aws')
+        self.default_bucket = "emprops-share"
+        
+        # Check if test mode is enabled
+        self.test_mode = os.getenv('STORAGE_TEST_MODE', 'false').lower() == 'true'
+        if self.test_mode:
+            self.default_bucket = "emprops-share-test"
+    
     @classmethod
     def INPUT_TYPES(s):
         input_dir = folder_paths.get_input_directory()
         files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
+        
+        # 2025-04-27 21:00: Determine available providers based on imports
+        providers = ["aws"]
+        if GCS_AVAILABLE:
+            providers.append("google")
+        if AZURE_AVAILABLE:
+            providers.append("azure")
+            
+        # Get default provider from environment
+        default_provider = os.getenv('CLOUD_PROVIDER', 'aws')
+        if default_provider not in providers:
+            default_provider = providers[0]
+        
         return {
             "required": {
-                "source_type": (["upload", "s3", "public_download"],),
+                "source_type": (["upload", "cloud", "public_download"],),
                 "image": (sorted(files),),
-                "s3_key": ("STRING", {"default": "", "placeholder": "S3 path"}),
-                "s3_bucket": ("STRING", {"default": "emprops-share"}),
+                "provider": (providers, {"default": default_provider}),
+                "cloud_key": ("STRING", {"default": "", "placeholder": "Path in cloud storage"}),
+                "bucket": ("STRING", {"default": "emprops-share"}),
                 "url": ("STRING", {"default": "", "placeholder": "https://example.com/image.jpg"}),
             }
         }
@@ -38,17 +63,40 @@ class EmpropsImageLoader:
             if not image_path:
                 print(f"[EmProps] Error: Failed to download image from URL: {kwargs['url']}", flush=True)
                 raise Exception(f"Failed to download image from URL: {kwargs['url']}")
-        else:  # s3
-            s3_handler = S3Handler(kwargs.get('s3_bucket'))
+        else:  # cloud
+            # 2025-04-27 21:00: Handle multiple cloud providers
+            provider = kwargs.get('provider', self.default_provider)
+            bucket = kwargs.get('bucket', self.default_bucket)
+            cloud_key = kwargs.get('cloud_key', '')
+            
+            if not cloud_key:
+                print(f"[EmProps] Error: No cloud key provided", flush=True)
+                raise Exception("No cloud key provided")
+                
             temp_dir = folder_paths.get_temp_directory()
             os.makedirs(temp_dir, exist_ok=True)
-            image_name = os.path.basename(kwargs['s3_key'])
+            image_name = os.path.basename(cloud_key)
             image_path = os.path.join(temp_dir, image_name)
-            print(f"[EmProps] Downloading from S3: {kwargs['s3_bucket']}/{kwargs['s3_key']}", flush=True)
-            success, error = s3_handler.download_file(kwargs['s3_key'], image_path)
+            
+            # Select the appropriate cloud handler based on provider
+            if provider == 'aws':
+                print(f"[EmProps] Downloading from AWS S3: {bucket}/{cloud_key}", flush=True)
+                handler = S3Handler(bucket)
+            elif provider == 'google':
+                print(f"[EmProps] Downloading from Google Cloud Storage: {bucket}/{cloud_key}", flush=True)
+                handler = GCSHandler(bucket)
+            elif provider == 'azure':
+                print(f"[EmProps] Downloading from Azure Blob Storage: {bucket}/{cloud_key}", flush=True)
+                handler = AzureHandler(bucket)
+            else:
+                print(f"[EmProps] Error: Unsupported cloud provider: {provider}", flush=True)
+                raise Exception(f"Unsupported cloud provider: {provider}")
+            
+            # Download the file
+            success, error = handler.download_file(cloud_key, image_path)
             if not success:
-                print(f"[EmProps] Error: Failed to download image from S3: {error}", flush=True)
-                raise Exception(f"Failed to download image from S3: {error}")
+                print(f"[EmProps] Error: Failed to download image from {provider}: {error}", flush=True)
+                raise Exception(f"Failed to download image from {provider}: {error}")
 
         print(f"[EmProps] Opening image: {image_path}", flush=True)
 
@@ -119,7 +167,8 @@ class EmpropsImageLoader:
             return m.digest().hex()
         elif kwargs.get('source_type') == 'public_download':
             return kwargs.get('url', '')
-        return kwargs.get('s3_key', '') + kwargs.get('s3_bucket', '')
+        # 2025-04-27 21:00: Updated for cloud storage
+        return kwargs.get('cloud_key', '') + kwargs.get('bucket', '') + kwargs.get('provider', 'aws')
 
     @classmethod
     def VALIDATE_INPUTS(s, **kwargs):
@@ -131,7 +180,15 @@ class EmpropsImageLoader:
                 return "URL is required for public download"
             if not is_url(kwargs.get('url')):
                 return "Invalid URL format"
-        else:  # s3
-            if not kwargs.get('s3_key'):
-                return "S3 key is required when using S3 source"
+        else:  # cloud
+            # 2025-04-27 21:00: Updated for cloud storage
+            if not kwargs.get('cloud_key'):
+                return "Cloud key is required when using cloud source"
+            
+            # Validate provider
+            provider = kwargs.get('provider', 'aws')
+            if provider == 'google' and not GCS_AVAILABLE:
+                return "Google Cloud Storage is not available. Install with 'pip install google-cloud-storage'"
+            elif provider == 'azure' and not AZURE_AVAILABLE:
+                return "Azure Blob Storage is not available. Install with 'pip install azure-storage-blob'"
         return True

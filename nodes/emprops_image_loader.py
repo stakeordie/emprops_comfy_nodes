@@ -10,7 +10,12 @@ from ..utils import try_download_file, is_url, S3Handler, GCSHandler, AzureHandl
 class EmpropsImageLoader:
     def __init__(self):
         # 2025-04-27 21:00: Get default cloud provider from environment
-        self.default_provider = os.getenv('CLOUD_PROVIDER', 'aws')
+        # Updated: 2025-05-07T15:40:00-04:00 - Added validation for CLOUD_PROVIDER
+        self.default_provider = os.getenv('CLOUD_PROVIDER', 'aws').lower()
+        if self.default_provider not in ['aws', 'google', 'azure']:
+            print(f"[EmProps] Warning: Unknown CLOUD_PROVIDER value: {self.default_provider}, defaulting to 'aws'")
+            self.default_provider = 'aws'
+            
         self.default_bucket = "emprops-share"
         
         # Check if test mode is enabled
@@ -86,7 +91,16 @@ class EmpropsImageLoader:
                 print(f"[EmProps] Downloading from Google Cloud Storage: {bucket}/{cloud_key}", flush=True)
                 handler = GCSHandler(bucket)
             elif provider == 'azure':
+                # Updated: 2025-05-07T15:40:30-04:00 - Added debug info for Azure credentials
                 print(f"[EmProps] Downloading from Azure Blob Storage: {bucket}/{cloud_key}", flush=True)
+                
+                # Debug info for Azure credentials
+                account_name = os.getenv('STORAGE_ACCOUNT_NAME') or os.getenv('AZURE_STORAGE_ACCOUNT')
+                if account_name:
+                    print(f"[EmProps] Using Azure Storage Account: {account_name}")
+                else:
+                    print(f"[EmProps] Warning: No Azure Storage Account found in environment variables")
+                    
                 handler = AzureHandler(bucket)
             else:
                 print(f"[EmProps] Error: Unsupported cloud provider: {provider}", flush=True)

@@ -429,11 +429,12 @@ class GCSHandler:
 # Added: 2025-04-13T21:30:00-04:00 - Azure Blob Storage handler implementation
 class AzureHandler:
     def __init__(self, container_name: Optional[str] = None):
-        self.container_name = container_name or os.getenv('AZURE_STORAGE_CONTAINER', 'test')
+        # Added: 2025-05-07T15:30:00-04:00 - Support for provider-agnostic environment variables
+        self.container_name = container_name or os.getenv('STORAGE_CONTAINER', os.getenv('AZURE_STORAGE_CONTAINER', 'test'))
         
-        # Get credentials from environment
-        self.account_name = os.getenv('AZURE_STORAGE_ACCOUNT')
-        self.account_key = os.getenv('AZURE_STORAGE_KEY')
+        # Get credentials from environment - support both provider-specific and provider-agnostic variables
+        self.account_name = os.getenv('STORAGE_ACCOUNT_NAME') or os.getenv('AZURE_STORAGE_ACCOUNT')
+        self.account_key = os.getenv('STORAGE_ACCOUNT_KEY') or os.getenv('AZURE_STORAGE_KEY')
         
         # Check for test mode
         # Updated: 2025-04-14T09:45:00-04:00 - Made environment variables provider-agnostic
@@ -445,8 +446,9 @@ class AzureHandler:
         # Validate credentials
         if not all([self.account_name, self.account_key]):
             missing = []
-            if not self.account_name: missing.append('AZURE_STORAGE_ACCOUNT')
-            if not self.account_key: missing.append('AZURE_STORAGE_KEY')
+            # Updated: 2025-05-07T15:30:30-04:00 - Show both provider-specific and provider-agnostic variable names
+            if not self.account_name: missing.append('STORAGE_ACCOUNT_NAME/AZURE_STORAGE_ACCOUNT')
+            if not self.account_key: missing.append('STORAGE_ACCOUNT_KEY/AZURE_STORAGE_KEY')
             raise ValueError(f"Missing required Azure environment variables: {', '.join(missing)}")
         
         # Initialize Azure Blob Service client
@@ -510,6 +512,64 @@ class AzureHandler:
             
             return True, ""
         except Exception as e:
+            return False, str(e)
+    
+    def upload_file(self, file_path: str, blob_prefix: Optional[str] = None, index: Optional[int] = None, target_name: Optional[str] = None) -> Tuple[bool, str]:
+        """
+        Upload a file to Azure Blob Storage
+        
+        Args:
+            file_path: Local path to the file
+            blob_prefix: Optional prefix (folder) in Azure container
+            index: Optional index for multiple files
+            target_name: Optional target filename to use instead of the source filename
+            
+        Returns:
+            Tuple[bool, str]: (success, error_message)
+        """
+        # Added: 2025-05-07T15:35:00-04:00 - Implement Azure upload with ContentSettings
+        try:
+            if not os.path.exists(file_path):
+                return False, f"File not found: {file_path}"
+                
+            # Determine the target blob name
+            if target_name:
+                blob_name = target_name
+            else:
+                blob_name = os.path.basename(file_path)
+                
+            # Add index if provided
+            if index is not None:
+                base, ext = os.path.splitext(blob_name)
+                blob_name = f"{base}_{index}{ext}"
+                
+            # Add prefix if provided
+            if blob_prefix:
+                blob_name = f"{blob_prefix.rstrip('/')}/{blob_name}"
+                
+            # Get content type
+            content_type, _ = mimetypes.guess_type(file_path)
+            if not content_type:
+                # Default to binary/octet-stream
+                content_type = 'application/octet-stream'
+            
+            # Upload the blob with proper ContentSettings object
+            from azure.storage.blob import ContentSettings
+            content_settings = ContentSettings(content_type=content_type)
+            blob_client = self.container_client.get_blob_client(blob_name)
+            
+            with open(file_path, 'rb') as data:
+                blob_client.upload_blob(data, overwrite=True, content_settings=content_settings)
+            
+            # Verify upload
+            if self.object_exists(blob_name):
+                # Generate URL
+                url = f"https://{self.account_name}.blob.core.windows.net/{self.container_name}/{blob_name}"
+                return True, url
+            else:
+                return False, "Failed to verify Azure Blob Storage upload"
+        except Exception as e:
+            print(f"[EmProps] Error uploading to Azure: {str(e)}")
             return False, str(e)
     
     def list_files(self, prefix: Optional[str] = None) -> List[str]:

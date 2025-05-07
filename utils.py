@@ -429,7 +429,7 @@ class GCSHandler:
 # Added: 2025-04-13T21:30:00-04:00 - Azure Blob Storage handler implementation
 class AzureHandler:
     def __init__(self, container_name: Optional[str] = None):
-        # Updated: 2025-05-07T15:54:00-04:00 - Use provider-specific variables with container-agnostic names
+        # Updated: 2025-05-07T16:05:00-04:00 - Explicitly load environment variables from .env files
         # Use provided container name or check environment variables
         if container_name:
             self.container_name = container_name
@@ -443,6 +443,29 @@ class AzureHandler:
         # Get Azure-specific credentials from environment
         self.account_name = os.getenv('AZURE_STORAGE_ACCOUNT')
         self.account_key = os.getenv('AZURE_STORAGE_KEY')
+        
+        # If not found, try loading from .env and .env.local files
+        if not self.account_name or not self.account_key:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            # Try .env first
+            env_path = os.path.join(current_dir, '.env')
+            if os.path.exists(env_path):
+                print(f"[EmProps] Loading environment variables from: {env_path}")
+                load_dotenv(env_path)
+                self.account_name = self.account_name or os.getenv('AZURE_STORAGE_ACCOUNT')
+                self.account_key = self.account_key or os.getenv('AZURE_STORAGE_KEY')
+                self.container_name = self.container_name or os.getenv('CLOUD_STORAGE_CONTAINER') or os.getenv('AZURE_STORAGE_CONTAINER', 'test')
+            
+            # If still not found, try .env.local
+            if not self.account_name or not self.account_key:
+                env_local_path = os.path.join(current_dir, '.env.local')
+                if os.path.exists(env_local_path):
+                    print(f"[EmProps] Loading environment variables from: {env_local_path}")
+                    load_dotenv(env_local_path)
+                    self.account_name = self.account_name or os.getenv('AZURE_STORAGE_ACCOUNT')
+                    self.account_key = self.account_key or os.getenv('AZURE_STORAGE_KEY')
+                    self.container_name = self.container_name or os.getenv('CLOUD_STORAGE_CONTAINER') or os.getenv('AZURE_STORAGE_CONTAINER', 'test')
         
         # Debug information about available environment variables
         print(f"[EmProps] Azure Handler - Available environment variables:")

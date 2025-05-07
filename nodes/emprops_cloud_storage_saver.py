@@ -122,6 +122,14 @@ class EmpropsCloudStorageSaver:
             if (not self.azure_account_name or not self.azure_account_key) and self.azure_available:
                 log_debug("Warning: Azure credentials not found in environment. Set STORAGE_ACCOUNT_NAME/STORAGE_ACCOUNT_KEY or AZURE_STORAGE_ACCOUNT/AZURE_STORAGE_KEY")
                 
+            # Check for CLOUD_PROVIDER environment variable
+            # Added: 2025-05-07T14:39:30-04:00 - Support for CLOUD_PROVIDER environment variable
+            self.default_provider = os.getenv('CLOUD_PROVIDER', 'aws').lower()
+            if self.default_provider not in ['aws', 'azure', 'google']:
+                log_debug(f"Warning: Unknown CLOUD_PROVIDER value: {self.default_provider}, defaulting to 'aws'")
+                self.default_provider = 'aws'
+            log_debug(f"Default cloud provider from environment: {self.default_provider}")
+            
             log_debug("EmpropsCloudStorageSaver initialization completed successfully")
         except Exception as e:
             log_debug(f"ERROR in EmpropsCloudStorageSaver.__init__: {str(e)}\n{traceback.format_exc()}")
@@ -239,17 +247,18 @@ class EmpropsCloudStorageSaver:
                 if attempt < max_attempts - 1:
                     print(f"[EmProps] Error checking Azure blob, retrying... attempt {attempt + 1}/{max_attempts}")
                     time.sleep(delay)
-                else:
-                    print(f"[EmProps] Warning: Could not verify Azure upload: {str(e)}")
-                    return False
-        return False
 
-    def save_to_cloud(self, images, provider, prefix, filename, bucket, prompt=None, extra_pnginfo=None):
-        """Save images to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with the specified prefix and filename"""
-        # Log the provider for debugging
-        log_debug(f"save_to_cloud called with provider: {provider}, bucket: {bucket}, prefix: {prefix}, filename: {filename}")
-        log_debug(f"Images type: {type(images)}, shape: {images.shape if hasattr(images, 'shape') else 'unknown'}")
-        log_debug(f"Prompt: {'Present' if prompt else 'None'}, extra_pnginfo: {'Present' if extra_pnginfo else 'None'}")
+RETURN_TYPES = ()  
+FUNCTION = "save_to_cloud"
+CATEGORY = "EmProps"
+OUTPUT_NODE = True
+DESCRIPTION = "Saves the input images to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with configurable bucket and prefix and displays them in the UI."
+
+def verify_s3_upload(self, s3_client, bucket: str, key: str, max_attempts: int = 5, delay: int = 1) -> bool:
+    """Verify that a file exists in S3 by checking with head_object"""
+    import time
+    
+    for attempt in range(max_attempts):
         try:
             # Initialize the appropriate cloud storage client based on provider
             if provider == "aws":
@@ -419,10 +428,12 @@ class EmpropsCloudStorageSaver:
                         image_bytes.seek(0)
                         
                         # Upload the blob with content settings
+                        from azure.storage.blob import ContentSettings
+                        content_settings = ContentSettings(content_type=mime_type)
                         blob_client.upload_blob(
                             image_bytes, 
                             overwrite=True, 
-                            content_settings={"content_type": mime_type}
+                            content_settings=content_settings
                         )
                         
                         # Verify upload using our dedicated verification method

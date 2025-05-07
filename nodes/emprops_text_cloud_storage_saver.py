@@ -119,6 +119,14 @@ class EmpropsTextCloudStorageSaver:
             if (not self.azure_account_name or not self.azure_account_key) and self.azure_available:
                 log_debug("Warning: Azure credentials not found in environment. Set STORAGE_ACCOUNT_NAME/STORAGE_ACCOUNT_KEY or AZURE_STORAGE_ACCOUNT/AZURE_STORAGE_KEY")
                 
+            # Check for CLOUD_PROVIDER environment variable
+            # Added: 2025-05-07T14:40:00-04:00 - Support for CLOUD_PROVIDER environment variable
+            self.default_provider = os.getenv('CLOUD_PROVIDER', 'aws').lower()
+            if self.default_provider not in ['aws', 'azure', 'google']:
+                log_debug(f"Warning: Unknown CLOUD_PROVIDER value: {self.default_provider}, defaulting to 'aws'")
+                self.default_provider = 'aws'
+            log_debug(f"Default cloud provider from environment: {self.default_provider}")
+                
             log_debug("EmpropsTextCloudStorageSaver initialization completed successfully")
         except Exception as e:
             log_debug(f"ERROR in EmpropsTextCloudStorageSaver.__init__: {str(e)}\n{traceback.format_exc()}")
@@ -385,11 +393,13 @@ class EmpropsTextCloudStorageSaver:
                     # Rewind the file pointer to the beginning
                     text_bytes.seek(0)
                     
-                    # Upload the blob with content settings
+                    # Fixed: 2025-05-07T14:40:00-04:00 - Use ContentSettings object instead of dict
+                    from azure.storage.blob import ContentSettings
+                    content_settings = ContentSettings(content_type=content_type)
                     blob_client.upload_blob(
                         text_bytes, 
                         overwrite=True, 
-                        content_settings={"content_type": content_type}
+                        content_settings=content_settings
                     )
                     
                     # Verify upload using our dedicated verification method

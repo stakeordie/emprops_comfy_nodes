@@ -429,29 +429,50 @@ class GCSHandler:
 # Added: 2025-04-13T21:30:00-04:00 - Azure Blob Storage handler implementation
 class AzureHandler:
     def __init__(self, container_name: Optional[str] = None):
-        # Added: 2025-05-07T15:30:00-04:00 - Support for provider-agnostic environment variables
-        self.container_name = container_name or os.getenv('STORAGE_CONTAINER', os.getenv('AZURE_STORAGE_CONTAINER', 'test'))
+        # Updated: 2025-05-07T15:54:00-04:00 - Use provider-specific variables with container-agnostic names
+        # Use provided container name or check environment variables
+        if container_name:
+            self.container_name = container_name
+        else:
+            # First check for provider-agnostic container name
+            self.container_name = os.getenv('CLOUD_STORAGE_CONTAINER')
+            if not self.container_name:
+                # Fall back to Azure-specific container name
+                self.container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'test')
         
-        # Get credentials from environment - support both provider-specific and provider-agnostic variables
-        self.account_name = os.getenv('STORAGE_ACCOUNT_NAME') or os.getenv('AZURE_STORAGE_ACCOUNT')
-        self.account_key = os.getenv('STORAGE_ACCOUNT_KEY') or os.getenv('AZURE_STORAGE_KEY')
+        # Get Azure-specific credentials from environment
+        self.account_name = os.getenv('AZURE_STORAGE_ACCOUNT')
+        self.account_key = os.getenv('AZURE_STORAGE_KEY')
+        
+        # Debug information about available environment variables
+        print(f"[EmProps] Azure Handler - Available environment variables:")
+        print(f"[EmProps] AZURE_STORAGE_ACCOUNT: {'Present' if self.account_name else 'Not found'}")
+        print(f"[EmProps] AZURE_STORAGE_KEY: {'Present' if self.account_key else 'Not found'}")
+        print(f"[EmProps] Container name: {self.container_name}")
         
         # Check for test mode
-        # Updated: 2025-04-14T09:45:00-04:00 - Made environment variables provider-agnostic
-        self.test_mode = os.getenv('STORAGE_TEST_MODE', os.getenv('AZURE_TEST_MODE', 'false')).lower() == 'true'
-        if self.test_mode:
+        # Updated: 2025-05-07T15:54:30-04:00 - Use provider-agnostic test container name
+        test_container = os.getenv('CLOUD_STORAGE_TEST_CONTAINER')
+        if test_container:
+            self.container_name = test_container
+            print(f"[EmProps] Using test container from CLOUD_STORAGE_TEST_CONTAINER: {self.container_name}")
+        elif os.getenv('STORAGE_TEST_MODE', 'false').lower() == 'true' or os.getenv('AZURE_TEST_MODE', 'false').lower() == 'true':
             self.container_name = f"{self.container_name}-test"
             print(f"[EmProps] Using test container: {self.container_name}")
         
         # Validate credentials
         if not all([self.account_name, self.account_key]):
             missing = []
-            # Updated: 2025-05-07T15:30:30-04:00 - Show both provider-specific and provider-agnostic variable names
-            if not self.account_name: missing.append('STORAGE_ACCOUNT_NAME/AZURE_STORAGE_ACCOUNT')
-            if not self.account_key: missing.append('STORAGE_ACCOUNT_KEY/AZURE_STORAGE_KEY')
-            raise ValueError(f"Missing required Azure environment variables: {', '.join(missing)}")
+            # Updated: 2025-05-07T15:55:00-04:00 - Focus on Azure-specific variables
+            if not self.account_name: 
+                missing.append('AZURE_STORAGE_ACCOUNT')
+            if not self.account_key: 
+                missing.append('AZURE_STORAGE_KEY')
+            raise ValueError(f"Missing required Azure environment variables: {', '.join(missing)}. Please set these in your .env file or environment.")
         
         # Initialize Azure Blob Service client
+        # Updated: 2025-05-07T15:52:00-04:00 - Added debug information for connection
+        print(f"[EmProps] Initializing Azure Blob Service client with account: {self.account_name}")
         connection_string = f"DefaultEndpointsProtocol=https;AccountName={self.account_name};AccountKey={self.account_key};EndpointSuffix=core.windows.net"
         self.blob_service_client = BlobServiceClient.from_connection_string(connection_string)
         self.container_client = self.blob_service_client.get_container_client(self.container_name)

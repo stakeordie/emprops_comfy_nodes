@@ -26,51 +26,54 @@ class EmpropsTextCloudStorageSaver:
     """
     # Updated: 2025-04-24T15:20:02-04:00 - Added enhanced logging
     def __init__(self):
-        log_debug("Initializing EmpropsTextCloudStorageSaver class")
+        # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Initializing EmpropsTextCloudStorageSaver class")  # Non-critical: class init, comment for future cleanup
         try:
             # Initialize common properties
-            log_debug("Setting up common properties")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Setting up common properties")  # Non-critical: setup, comment for future cleanup
             self.default_bucket = "emprops-share"
             self.type = "s3_output"  # Keep the same type for backward compatibility
-            log_debug("Common properties set")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Common properties set")  # Non-critical: setup, comment for future cleanup
         
             # Check if Google Cloud Storage is available
-            log_debug(f"Checking GCS availability: {GCS_AVAILABLE}")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Checking GCS availability: {GCS_AVAILABLE}")  # Non-critical: provider check
             self.gcs_available = GCS_AVAILABLE
             if self.gcs_available:
-                log_debug("Google Cloud Storage support is available")
+                pass  # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00]
+                pass  # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00]
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Google Cloud Storage support is available")  # Non-critical: provider check
             else:
-                log_debug("Google Cloud Storage support is not available. Install with 'pip install google-cloud-storage'")
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Google Cloud Storage support is not available. Install with 'pip install google-cloud-storage'")  # Non-critical: provider check
             
-            # Check if Azure Blob Storage is available
-            log_debug(f"Checking Azure availability: {AZURE_AVAILABLE}")
-            self.azure_available = AZURE_AVAILABLE
+                # Check if Azure Blob Storage is available
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Checking Azure availability: {AZURE_AVAILABLE}")  # Non-critical: provider check
+                self.azure_available = AZURE_AVAILABLE
             if self.azure_available:
-                log_debug("Azure Blob Storage support is available")
+                pass  # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00]
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Azure Blob Storage support is available")  # Non-critical: provider check
             else:
-                log_debug("Azure Blob Storage support is not available. Install with 'pip install azure-storage-blob'")
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Azure Blob Storage support is not available. Install with 'pip install azure-storage-blob'")  # Non-critical: provider check
         
-            # First try system environment for AWS credentials
-            log_debug("Loading AWS credentials from environment")
-            self.aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
-            self.aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
-            self.aws_region = os.getenv('AWS_DEFAULT_REGION')
-            log_debug(f"AWS credentials from env: Access Key: {'Found' if self.aws_access_key else 'Not found'}, Secret Key: {'Found' if self.aws_secret_key else 'Not found'}, Region: {self.aws_region or 'Not found'}")
+                # First try system environment for AWS credentials
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Loading AWS credentials from environment")  # Non-critical: routine credential load
+                self.aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+                self.aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+                self.aws_region = os.getenv('AWS_DEFAULT_REGION')
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"AWS credentials from env: Access Key: {'Found' if self.aws_access_key else 'Not found'}, Secret Key: {'Found' if self.aws_secret_key else 'Not found'}, Region: {self.aws_region or 'Not found'}")  # Non-critical: credential detail
 
             # If not found, try .env and .env.local files
             if not self.aws_access_key or not self.aws_secret_key:
                 current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Go up one level to project root
-                log_debug(f"Looking for .env files in: {current_dir}")
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Looking for .env files in: {current_dir}")  # Non-critical: routine .env search
                 
                 # Try .env first
                 env_path = os.path.join(current_dir, '.env')
                 if os.path.exists(env_path):
-                    log_debug(f"Loading .env from: {env_path}")
+                    # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Loading .env from: {env_path}")  # Non-critical: routine .env load
                     load_dotenv(env_path)
                     self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
                     if not self.aws_secret_key:
                         self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
-                        log_debug("AWS_SECRET_ACCESS_KEY_ENCODED not found in .env, trying AWS_SECRET_ACCESS_KEY")
+                        # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("AWS_SECRET_ACCESS_KEY_ENCODED not found in .env, trying AWS_SECRET_ACCESS_KEY")  # Non-critical: routine .env fallback
                     self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
                     self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
                 
@@ -78,31 +81,31 @@ class EmpropsTextCloudStorageSaver:
                 if not self.aws_access_key or not self.aws_secret_key:
                     env_local_path = os.path.join(current_dir, '.env.local')
                     if os.path.exists(env_local_path):
-                        log_debug(f"Loading .env.local from: {env_local_path}")
+                        # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Loading .env.local from: {env_local_path}")  # Non-critical: routine .env.local load
                         load_dotenv(env_local_path)
                         self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
                         if not self.aws_secret_key:
                             self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
-                            log_debug("AWS_SECRET_ACCESS_KEY_ENCODED not found in .env.local, trying AWS_SECRET_ACCESS_KEY")
+                            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("AWS_SECRET_ACCESS_KEY_ENCODED not found in .env.local, trying AWS_SECRET_ACCESS_KEY")  # Non-critical: routine .env fallback
                         self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
                         self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
         
             # Set default region if still not set
             self.aws_region = self.aws_region or 'us-east-1'
-            log_debug(f"Final AWS region: {self.aws_region}")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Final AWS region: {self.aws_region}")  # Non-critical: routine
 
             if not self.aws_secret_key or not self.aws_access_key:
                 log_debug("Warning: AWS credentials not found in environment or .env.local")
             
             # Check for Google Cloud credentials
-            log_debug("Checking Google Cloud credentials")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Checking Google Cloud credentials")  # Non-critical: routine
             self.gcs_credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-            log_debug(f"GCS credentials path: {self.gcs_credentials_path or 'Not found'}")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"GCS credentials path: {self.gcs_credentials_path or 'Not found'}")  # Non-critical: routine
             if not self.gcs_credentials_path and self.gcs_available:
                 log_debug("Warning: GOOGLE_APPLICATION_CREDENTIALS not found in environment")
             
             # Check for Azure credentials
-            log_debug("Checking Azure credentials")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Checking Azure credentials")  # Non-critical: routine
             # Support for provider-agnostic environment variables
             # Added: 2025-05-07T14:30:00-04:00 - Provider-agnostic environment variables
             self.azure_account_name = os.getenv('STORAGE_ACCOUNT_NAME', os.getenv('AZURE_STORAGE_ACCOUNT'))
@@ -113,9 +116,9 @@ class EmpropsTextCloudStorageSaver:
             storage_test_mode = os.getenv('STORAGE_TEST_MODE', os.getenv('AZURE_TEST_MODE', 'false')).lower() == 'true'
             if storage_test_mode:
                 self.azure_container = f"{self.azure_container}-test"
-                log_debug(f"Using test container for Azure: {self.azure_container}")
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Using test container for Azure: {self.azure_container}")  # Non-critical: test mode
                 
-            log_debug(f"Azure credentials: Account: {'Found' if self.azure_account_name else 'Not found'}, Key: {'Found' if self.azure_account_key else 'Not found'}, Container: {self.azure_container}")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Azure credentials: Account: {'Found' if self.azure_account_name else 'Not found'}, Key: {'Found' if self.azure_account_key else 'Not found'}, Container: {self.azure_container}")  # Non-critical: credential detail
             if (not self.azure_account_name or not self.azure_account_key) and self.azure_available:
                 log_debug("Warning: Azure credentials not found in environment. Set STORAGE_ACCOUNT_NAME/STORAGE_ACCOUNT_KEY or AZURE_STORAGE_ACCOUNT/AZURE_STORAGE_KEY")
                 
@@ -125,28 +128,28 @@ class EmpropsTextCloudStorageSaver:
             if self.default_provider not in ['aws', 'azure', 'google']:
                 log_debug(f"Warning: Unknown CLOUD_PROVIDER value: {self.default_provider}, defaulting to 'aws'")
                 self.default_provider = 'aws'
-            log_debug(f"Default cloud provider from environment: {self.default_provider}")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Default cloud provider from environment: {self.default_provider}")  # Non-critical: routine
                 
-            log_debug("EmpropsTextCloudStorageSaver initialization completed successfully")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("EmpropsTextCloudStorageSaver initialization completed successfully")  # Non-critical: routine
         except Exception as e:
             log_debug(f"ERROR in EmpropsTextCloudStorageSaver.__init__: {str(e)}\n{traceback.format_exc()}")
             raise
 
     @classmethod
     def INPUT_TYPES(cls):
-        log_debug("EmpropsTextCloudStorageSaver.INPUT_TYPES called")
+        # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("EmpropsTextCloudStorageSaver.INPUT_TYPES called")  # Non-critical: routine
         try:
             # Determine available providers based on imports
             providers = ["aws"]
-            log_debug(f"GCS_AVAILABLE: {GCS_AVAILABLE}, AZURE_AVAILABLE: {AZURE_AVAILABLE}")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"GCS_AVAILABLE: {GCS_AVAILABLE}, AZURE_AVAILABLE: {AZURE_AVAILABLE}")  # Non-critical: provider check
             if GCS_AVAILABLE:
                 providers.append("google")
-                log_debug("Added 'google' to providers list")
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Added 'google' to providers list")  # Non-critical: provider list
             if AZURE_AVAILABLE:
                 providers.append("azure")
-                log_debug("Added 'azure' to providers list")
+                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Added 'azure' to providers list")  # Non-critical: provider list
             
-            log_debug(f"Final providers list: {providers}")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Final providers list: {providers}")  # Non-critical: provider list
             result = {
                 "required": {
                     "text": ("STRING", {"multiline": True}),  # Allow multiline text input
@@ -156,7 +159,7 @@ class EmpropsTextCloudStorageSaver:
                     "bucket": ("STRING", {"default": "emprops-share"})
                 }
             }
-            log_debug(f"Returning INPUT_TYPES result: {result}")
+            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Returning INPUT_TYPES result: {result}")  # Non-critical: routine
             return result
         except Exception as e:
             log_debug(f"ERROR in INPUT_TYPES: {str(e)}\n{traceback.format_exc()}")
@@ -244,8 +247,8 @@ class EmpropsTextCloudStorageSaver:
     def save_to_cloud(self, text, provider, prefix, filename, bucket):
         """Save text content to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with the specified prefix and filename"""
         # Log the provider for debugging
-        log_debug(f"save_to_cloud called with provider: {provider}, bucket: {bucket}, prefix: {prefix}, filename: {filename}")
-        log_debug(f"Text type: {type(text)}, length: {len(text) if text else 0}")
+        # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"save_to_cloud called with provider: {provider}, bucket: {bucket}, prefix: {prefix}, filename: {filename}")  # Non-critical: routine
+        # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Text type: {type(text)}, length: {len(text) if text else 0}")  # Non-critical: routine
         try:
             # Initialize the appropriate cloud storage client based on provider
             if provider == "aws":

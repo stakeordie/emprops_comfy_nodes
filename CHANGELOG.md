@@ -28,10 +28,10 @@
   - Added test mode for copying existing models instead of downloading
   - Added detailed debug logging for troubleshooting
   
-- Enhanced `EmProps_Asset_Downloader` node (2025-05-12T15:35:00-04:00)
-  - Changed return type to "CHECKPOINT_NAME" for direct compatibility with Load Checkpoint node
-  - Updated return name to "ckpt_name" to match Load Checkpoint input
-  - Enables direct connection to Load Checkpoint without intermediary nodes
+- Enhanced `EmProps_Asset_Downloader` node (2025-05-12T15:40:00-04:00)
+  - Reverted to STRING return type for maximum flexibility
+  - Maintains robust model cache refresh functionality
+  - Allows for custom workflow configurations
 
 ## 2025-04-24
 

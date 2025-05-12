@@ -25,9 +25,9 @@ def model_folders():
 # Updated: 2025-05-12T14:04:35-04:00 - No longer needed as we use folder_paths
 
 class EmProps_Asset_Downloader:
-    # Updated: 2025-05-12T15:35:00-04:00 - Changed return type to be compatible with Load Checkpoint node
-    RETURN_TYPES = ("CHECKPOINT_NAME",)
-    RETURN_NAMES = ("ckpt_name",)
+    # Updated: 2025-05-12T16:00:00-04:00 - Added second output for direct compatibility with Load Checkpoint
+    RETURN_TYPES = ("STRING", folder_paths.get_filename_list("checkpoints"))
+    RETURN_NAMES = ("downloaded_path", "ckpt_name")
     OUTPUT_NODE = True
     CATEGORY = "EmProps"
     FUNCTION = "download"
@@ -149,9 +149,9 @@ class EmProps_Asset_Downloader:
                     del folder_paths.filename_list_cache[save_to]
                 folder_paths.get_filename_list(save_to)
                 
-                # Return just the filename
+                # Return both values
                 log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
-                return (filename,)
+                return (filename, filename)
                 
             except Exception as e:
                 log_debug(f"Error copying file: {str(e)}")
@@ -249,5 +249,5 @@ class EmProps_Asset_Downloader:
                 os.remove(temp_path)
             raise e
 
-        # Updated: 2025-05-12T14:08:00-04:00 - Return empty path on failure
-        return ("",)
+        # Updated: 2025-05-12T16:00:00-04:00 - Return empty values on failure
+        return ("", "")

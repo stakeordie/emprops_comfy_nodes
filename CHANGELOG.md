@@ -1,5 +1,21 @@
 # EmProps ComfyUI Nodes Changelog
 
+## 2025-05-12
+
+### Added
+- Added `EmProps_Asset_Downloader` node (2025-05-12T13:52:12-04:00)
+  - Enables downloading models and assets from external URLs (Hugging Face, CivitAI, etc.)
+  - Supports authenticated downloads using API tokens
+  - Includes visual progress indicator during downloads
+  - Integrated from ServiceStack/comfy-asset-downloader
+
+### Improved
+- Enhanced `EmProps_Asset_Downloader` node (2025-05-12T14:08:00-04:00)
+  - Updated to use ComfyUI's folder path configuration system
+  - Added output signal to indicate download completion
+  - Automatically refreshes model cache after download
+  - Enables workflows to work on first run with missing models
+
 ## 2025-04-24
 
 ### Added

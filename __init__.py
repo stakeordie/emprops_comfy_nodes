@@ -18,6 +18,7 @@ from .nodes.emprops_cloud_storage_saver import EmpropsCloudStorageSaver
 from .nodes.emprops_image_loader import EmpropsImageLoader
 from .nodes.emprops_text_s3_saver import EmProps_Text_S3_Saver
 from .nodes.emprops_text_cloud_storage_saver import EmpropsTextCloudStorageSaver, EmProps_Text_S3_Saver as EmProps_Text_S3_Saver_New  # Added: 2025-04-24T15:20:02-04:00
+from .nodes.emprops_asset_downloader import EmProps_Asset_Downloader  # Added: 2025-05-12T13:52:12-04:00
 
 log_debug("Starting EmProps initialization")
 log_debug(f"Python path: {sys.path}")
@@ -67,6 +68,7 @@ try:
     "EmProps_Image_Loader": EmpropsImageLoader,
     "EmProps_Text_S3_Saver": EmProps_Text_S3_Saver_New,  # Updated: 2025-04-24T15:20:02-04:00
     "EmProps_Text_Cloud_Storage_Saver": EmpropsTextCloudStorageSaver,  # Added: 2025-04-24T15:20:02-04:00
+    "EmProps_Asset_Downloader": EmProps_Asset_Downloader,  # Added: 2025-05-12T13:52:12-04:00
 }
     log_debug(f"NODE_CLASS_MAPPINGS created successfully with {len(NODE_CLASS_MAPPINGS)} entries")
     for node_name, node_class in NODE_CLASS_MAPPINGS.items():
@@ -84,9 +86,13 @@ try:
     "EmProps_Image_Loader": "EmProps Image Loader",
     "EmProps_Text_S3_Saver": "EmProps Text S3 Saver (Legacy)",  # Updated: 2025-04-24T15:20:02-04:00
     "EmProps_Text_Cloud_Storage_Saver": "EmProps Text Cloud Storage Saver",  # Added: 2025-04-24T15:20:02-04:00
+    "EmProps_Asset_Downloader": "EmProps Asset Downloader",  # Added: 2025-05-12T13:52:12-04:00
 }
     log_debug(f"NODE_DISPLAY_NAME_MAPPINGS created successfully with {len(NODE_DISPLAY_NAME_MAPPINGS)} entries")
 except Exception as e:
     log_debug(f"Error creating NODE_DISPLAY_NAME_MAPPINGS: {str(e)}\n{traceback.format_exc()}")
 
-__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
+# Added: 2025-05-12T13:52:12-04:00 - Added WEB_DIRECTORY for asset downloader JS
+WEB_DIRECTORY = os.path.join(os.path.dirname(os.path.realpath(__file__)), "js")
+
+__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']

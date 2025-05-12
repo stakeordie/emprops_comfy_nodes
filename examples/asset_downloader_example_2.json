@@ -1,0 +1,393 @@
+{
+  "last_node_id": 8,
+  "last_link_id": 6,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "EmProps_Asset_Downloader",
+      "pos": [
+        200,
+        200
+      ],
+      "size": {
+        "0": 315,
+        "1": 170
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "url",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "url",
+            "config": [
+              "STRING",
+              {
+                "multiline": false,
+                "default": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step.safetensors"
+              }
+            ]
+          }
+        },
+        {
+          "name": "save_to",
+          "type": "COMBO",
+          "link": null,
+          "widget": {
+            "name": "save_to",
+            "config": [
+              "checkpoints"
+            ]
+          }
+        },
+        {
+          "name": "filename",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "filename",
+            "config": [
+              "STRING",
+              {
+                "multiline": false,
+                "default": "sdxl_lightning_4step.safetensors"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": "STRING",
+          "link": null,
+          "widget": {
+            "name": "token",
+            "config": [
+              "STRING",
+              {
+                "default": "",
+                "multiline": false,
+                "password": true
+              }
+            ]
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "downloaded_path",
+          "type": "STRING",
+          "links": [],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmProps_Asset_Downloader"
+      },
+      "widgets_values": [
+        "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step.safetensors",
+        "checkpoints",
+        "sdxl_lightning_4step.safetensors",
+        ""
+      ],
+      "color": "#3f789e",
+      "bgcolor": "#3f789e44",
+      "title": "Method 2: Automatic Refresh"
+    },
+    {
+      "id": 2,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        600,
+        200
+      ],
+      "size": {
+        "0": 315,
+        "1": 98
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            2
+          ],
+          "shape": 3,
+          "slot_index": 1
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            3
+          ],
+          "shape": 3,
+          "slot_index": 2
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "sdxl_lightning_4step.safetensors"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "EmptyLatentImage",
+      "pos": [
+        600,
+        400
+      ],
+      "size": {
+        "0": 315,
+        "1": 106
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            4
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyLatentImage"
+      },
+      "widgets_values": [
+        512,
+        512,
+        1
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [
+        600,
+        600
+      ],
+      "size": {
+        "0": 422.84503173828125,
+        "1": 164.31304931640625
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            5
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "a photo of a cat, high quality, detailed"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "KSampler",
+      "pos": [
+        1000,
+        200
+      ],
+      "size": {
+        "0": 315,
+        "1": 262
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 5
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": null
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            6
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        123456,
+        "randomize",
+        4,
+        8,
+        "euler",
+        "normal",
+        1
+      ]
+    },
+    {
+      "id": 6,
+      "type": "VAEDecode",
+      "pos": [
+        1400,
+        200
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 6
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      5,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      2,
+      1,
+      4,
+      0,
+      "CLIP"
+    ],
+    [
+      3,
+      2,
+      2,
+      6,
+      1,
+      "VAE"
+    ],
+    [
+      4,
+      3,
+      0,
+      5,
+      3,
+      "LATENT"
+    ],
+    [
+      5,
+      4,
+      0,
+      5,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      6,
+      5,
+      0,
+      6,
+      0,
+      "LATENT"
+    ]
+  ],
+  "groups": [
+    {
+      "title": "Method 2: Automatic Refresh",
+      "bounding": [
+        180,
+        150,
+        1450,
+        650
+      ],
+      "color": "#3f789e",
+      "font_size": 24
+    }
+  ],
+  "config": {},
+  "extra": {},
+  "version": 0.4,
+  "title": "EmProps Asset Downloader Example - Method 2",
+  "description": "Example workflow showing how to use EmProps Asset Downloader with automatic model cache refresh. Added: 2025-05-12T14:09:53-04:00"
+}

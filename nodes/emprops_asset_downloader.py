@@ -149,7 +149,9 @@ class EmProps_Asset_Downloader:
                     del folder_paths.filename_list_cache[save_to]
                 folder_paths.get_filename_list(save_to)
                 
-                return (os.path.join(save_to, filename),)
+                # Return just the filename
+                log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
+                return (filename,)
                 
             except Exception as e:
                 log_debug(f"Error copying file: {str(e)}")
@@ -160,8 +162,9 @@ class EmProps_Asset_Downloader:
         # Normal download mode - check if file already exists
         if os.path.exists(save_path):
             log_debug(f"EmProps_Asset_Downloader: File already exists: {os.path.join(save_to, filename)}")
-            # Updated: 2025-05-12T14:08:00-04:00 - Return path even if file already exists
-            return (os.path.join(save_to, filename),)
+            # Updated: 2025-05-12T15:15:00-04:00 - Return just the filename for compatibility with checkpoint loader
+            log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
+            return (filename,)
 
         log_debug(f'EmProps_Asset_Downloader: Downloading {url} to {os.path.join(save_to, filename)} {" with token" if token else ""}')
         self.node_id = node_id
@@ -236,8 +239,9 @@ class EmProps_Asset_Downloader:
             # Force a refresh of the model list
             folder_paths.get_filename_list(save_to)
             
-            # Return the path to the downloaded file as a signal
-            return (os.path.join(save_to, filename),)
+            # Updated: 2025-05-12T15:15:00-04:00 - Return just the filename for compatibility with checkpoint loader
+            log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
+            return (filename,)
 
         except Exception as e:
             log_debug(f"Error downloading file: {str(e)}")

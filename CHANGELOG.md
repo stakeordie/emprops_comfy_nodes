@@ -21,6 +21,12 @@
   - Improved error handling for file operations
   - Fixed indentation issues in the code
   - Ensures compatibility with various ComfyUI environments
+  
+- Enhanced `EmProps_Asset_Downloader` node (2025-05-12T15:15:00-04:00)
+  - Modified to return just the filename instead of the full path
+  - Improved compatibility with Load Checkpoint node
+  - Added test mode for copying existing models instead of downloading
+  - Added detailed debug logging for troubleshooting
 
 ## 2025-04-24
 

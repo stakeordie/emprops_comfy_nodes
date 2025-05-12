@@ -49,13 +49,17 @@ class EmProps_Asset_Downloader:
             },
             "optional": {
                 "token": ("STRING", { "default": "", "multiline": False, "password": True, "widget": True }),
+                # Added: 2025-05-12T14:42:00-04:00 - Test mode checkbox for creating a copy instead of downloading
+                "test_with_copy": ("BOOLEAN", {"default": False, "label": "Test with copy"}),
+                # Added: 2025-05-12T14:42:00-04:00 - Source filename for test mode
+                "source_filename": ("STRING", {"default": "", "multiline": False, "placeholder": "Leave empty to use filename"}),
             },
             "hidden": {
                 "node_id": "UNIQUE_ID"
             }
         }
 
-    def download(self, url, save_to, filename, node_id, token=""):
+    def download(self, url, save_to, filename, node_id, token="", test_with_copy=False, source_filename=""):
         log_debug(f"EmProps_Asset_Downloader.download called with url={url}, save_to={save_to}, filename={filename}, node_id={node_id}")
         
         if not url or not save_to or not filename:
@@ -78,6 +82,82 @@ class EmProps_Asset_Downloader:
         
         # Construct the full save path
         save_path = os.path.join(model_folder, filename)
+        
+        # Added: 2025-05-12T14:42:00-04:00 - Test with copy mode
+        if test_with_copy:
+            log_debug(f"EmProps_Asset_Downloader: Test with copy mode enabled")
+            
+            # Determine source filename (use the target filename if not specified)
+            src_filename = source_filename if source_filename else filename
+            
+            # If source filename is the same as target, modify it to remove the 'x' if present
+            if src_filename == filename and filename.endswith('x.' + filename.split('.')[-1]):
+                src_filename = filename[:-2] + '.' + filename.split('.')[-1]
+            elif src_filename == filename:
+                # If they're the same and no 'x', we need to ensure they're different
+                name_parts = filename.split('.')
+                if len(name_parts) > 1:
+                    src_filename = '.'.join(name_parts[:-1]) + '_orig.' + name_parts[-1]
+                else:
+                    src_filename = filename + '_orig'
+            
+            source_path = os.path.join(model_folder, src_filename)
+            
+            if not os.path.exists(source_path):
+                log_debug(f"EmProps_Asset_Downloader: Source file does not exist: {source_path}")
+                return ("Source file not found",)
+                
+            log_debug(f"EmProps_Asset_Downloader: Copying {source_path} to {save_path}")
+            
+            # Create a copy with progress updates
+            try:
+                # Get file size for progress reporting
+                total_size = os.path.getsize(source_path)
+                copied = 0
+                last_progress_update = 0
+                
+                with open(source_path, 'rb') as src_file:
+                    with open(save_path, 'wb') as dst_file:
+                        # Use a reasonable buffer size
+                        buffer_size = 4 * 1024 * 1024  # 4MB buffer
+                        while True:
+                            buffer = src_file.read(buffer_size)
+                            if not buffer:
+                                break
+                                
+                            dst_file.write(buffer)
+                            copied += len(buffer)
+                            
+                            # Update progress
+                            if total_size > 0:
+                                progress = (copied / total_size) * 100.0
+                                if (progress - last_progress_update) > 1.0:
+                                    log_debug(f"Copying {filename}... {progress:.1f}%")
+                                    last_progress_update = progress
+                                if progress is not None and hasattr(self, 'node_id'):
+                                    PromptServer.instance.send_sync("progress", {
+                                        "node": self.node_id,
+                                        "value": progress,
+                                        "max": 100
+                                    })
+                
+                log_debug(f"EmProps_Asset_Downloader: Successfully copied file to {save_path}")
+                
+                # Refresh model cache
+                log_debug(f"Refreshing model cache for {save_to}")
+                if save_to in folder_paths.filename_list_cache:
+                    del folder_paths.filename_list_cache[save_to]
+                folder_paths.get_filename_list(save_to)
+                
+                return (os.path.join(save_to, filename),)
+                
+            except Exception as e:
+                log_debug(f"Error copying file: {str(e)}")
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                return (f"Error: {str(e)}",)
+        
+        # Normal download mode - check if file already exists
         if os.path.exists(save_path):
             log_debug(f"EmProps_Asset_Downloader: File already exists: {os.path.join(save_to, filename)}")
             # Updated: 2025-05-12T14:08:00-04:00 - Return path even if file already exists

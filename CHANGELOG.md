@@ -15,6 +15,12 @@
   - Added output signal to indicate download completion
   - Automatically refreshes model cache after download
   - Enables workflows to work on first run with missing models
+  
+- Fixed `EmProps_Asset_Downloader` node (2025-05-12T14:20:33-04:00)
+  - Added automatic directory creation for download paths
+  - Improved error handling for file operations
+  - Fixed indentation issues in the code
+  - Ensures compatibility with various ComfyUI environments
 
 ## 2025-04-24
 

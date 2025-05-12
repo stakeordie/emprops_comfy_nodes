@@ -43,12 +43,12 @@ class EmProps_Asset_Downloader:
         log_debug("EmProps_Asset_Downloader.INPUT_TYPES called")
         return {
             "required": {
-                "url": ("STRING", {"multiline": False, "default": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step.safetensors"}),
-                "save_to": (model_folders(), { "default": "checkpoints" }),
-                "filename": ("STRING", {"multiline": False, "default": "sdxl_lightning_4step.safetensors"}),
+                "url": ("STRING", {"multiline": False, "default": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step.safetensors", "widget": True}),
+                "save_to": (model_folders(), { "default": "checkpoints", "widget": True }),
+                "filename": ("STRING", {"multiline": False, "default": "sdxl_lightning_4step.safetensors", "widget": True}),
             },
             "optional": {
-                "token": ("STRING", { "default": "", "multiline": False, "password": True }),
+                "token": ("STRING", { "default": "", "multiline": False, "password": True, "widget": True }),
             },
             "hidden": {
                 "node_id": "UNIQUE_ID"
@@ -70,6 +70,11 @@ class EmProps_Asset_Downloader:
         # Get the first folder path for the selected model type
         model_folder = folder_paths.get_folder_paths(save_to)[0]
         log_debug(f"Using model folder: {model_folder}")
+        
+        # Ensure the model folder exists
+        if not os.path.exists(model_folder):
+            log_debug(f"Creating model folder: {model_folder}")
+            os.makedirs(model_folder, exist_ok=True)
         
         # Construct the full save path
         save_path = os.path.join(model_folder, filename)
@@ -95,30 +100,51 @@ class EmProps_Asset_Downloader:
 
             total_size = int(response.headers.get('content-length', 0))
             temp_path = save_path + '.tmp'
+            
+            # Ensure parent directory exists
+            parent_dir = os.path.dirname(temp_path)
+            if not os.path.exists(parent_dir):
+                log_debug(f"Creating parent directory: {parent_dir}")
+                os.makedirs(parent_dir, exist_ok=True)
 
             downloaded = 0
             last_progress_update = 0
             
-            with open(temp_path, 'wb') as file:
-                with tqdm(total=total_size, unit='iB', unit_scale=True, desc=filename) as pbar:
-                    for data in response.iter_content(chunk_size=4*1024*1024):
-                        size = file.write(data)
-                        downloaded += size
-                        pbar.update(size)
+            try:
+                with open(temp_path, 'wb') as file:
+                    with tqdm(total=total_size, unit='iB', unit_scale=True, desc=filename) as pbar:
+                        for data in response.iter_content(chunk_size=4*1024*1024):
+                            size = file.write(data)
+                            downloaded += size
+                            pbar.update(size)
 
-                        if total_size > 0:
-                            progress = (downloaded / total_size) * 100.0
-                            if (progress - last_progress_update) > 0.2:
-                                log_debug(f"Downloading {filename}... {progress:.1f}%")
-                                last_progress_update = progress
-                            if progress is not None and hasattr(self, 'node_id'):
-                                PromptServer.instance.send_sync("progress", {
-                                    "node": self.node_id,
-                                    "value": progress,
-                                    "max": 100
-                                })
-
-            shutil.move(temp_path, save_path)
+                            if total_size > 0:
+                                progress = (downloaded / total_size) * 100.0
+                                if (progress - last_progress_update) > 0.2:
+                                    log_debug(f"Downloading {filename}... {progress:.1f}%")
+                                    last_progress_update = progress
+                                if progress is not None and hasattr(self, 'node_id'):
+                                    PromptServer.instance.send_sync("progress", {
+                                        "node": self.node_id,
+                                        "value": progress,
+                                        "max": 100
+                                    })
+                
+                # Close the file before moving it
+            except Exception as e:
+                log_debug(f"Error writing to temporary file: {str(e)}")
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                raise e
+                
+            # Move the temporary file to the final location
+            try:
+                shutil.move(temp_path, save_path)
+            except Exception as e:
+                log_debug(f"Error moving temporary file to final location: {str(e)}")
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                raise e
             log_debug(f"Complete! {filename} saved to {save_path}")
             
             # Updated: 2025-05-12T14:08:00-04:00 - Refresh model cache

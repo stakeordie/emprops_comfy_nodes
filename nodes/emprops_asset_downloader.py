@@ -25,9 +25,9 @@ def model_folders():
 # Updated: 2025-05-12T14:04:35-04:00 - No longer needed as we use folder_paths
 
 class EmProps_Asset_Downloader:
-    # Updated: 2025-05-12T14:08:00-04:00 - Added STRING return type to signal download completion
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("downloaded_path",)
+    # Updated: 2025-05-12T15:35:00-04:00 - Changed return type to be compatible with Load Checkpoint node
+    RETURN_TYPES = ("CHECKPOINT_NAME",)
+    RETURN_NAMES = ("ckpt_name",)
     OUTPUT_NODE = True
     CATEGORY = "EmProps"
     FUNCTION = "download"

@@ -2,6 +2,7 @@ import os
 import time
 import traceback
 from server import PromptServer
+import sys
 import folder_paths
 import comfy.sd
 

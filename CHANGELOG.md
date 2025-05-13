@@ -1,5 +1,13 @@
 # EmProps ComfyUI Nodes Changelog
 
+## 2025-05-13
+
+### Fixed
+- Fixed `EmProps_Asset_Downloader` node (2025-05-13T16:04:00-04:00)
+  - Fixed return type declaration to be STRING instead of list of checkpoints
+  - Ensures proper connection with checkpoint loader nodes
+  - Resolves type mismatch when connecting to EmProps_Checkpoint_Loader
+
 ## 2025-05-12
 
 ### Added

@@ -26,7 +26,8 @@ def model_folders():
 
 class EmProps_Asset_Downloader:
     # Updated: 2025-05-12T16:00:00-04:00 - Added second output for direct compatibility with Load Checkpoint
-    RETURN_TYPES = ("STRING", folder_paths.get_filename_list("checkpoints"))
+    # Updated: 2025-05-13T16:04:00-04:00 - Fixed return type to be STRING instead of list of checkpoints
+    RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("downloaded_path", "ckpt_name")
     OUTPUT_NODE = True
     CATEGORY = "EmProps"

@@ -3,11 +3,12 @@
 ## 2025-05-13
 
 ### Added
-- Added model cache database system (2025-05-13T17:25:00-04:00)
-  - Implemented SQLite database for tracking downloaded models
-  - Records when models are downloaded by the asset downloader
-  - Tracks file size, type, and download timestamp
-  - Lays foundation for future storage management features
+- Added model cache database system (2025-05-13T17:28:11-04:00)
+  - Implemented SQLite database for tracking model usage
+  - Records when models are downloaded or used by the asset downloader
+  - Updates last_used timestamp and increments use_count for existing models
+  - Tracks file size, type, and timestamps
+  - Lays foundation for future LRU-based storage management
   - Designed for efficient model eviction when storage limits are reached
 
 - Added additional model loader nodes (2025-05-13T17:00:00-04:00)

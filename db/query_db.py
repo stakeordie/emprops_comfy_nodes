@@ -82,13 +82,16 @@ def main():
             print("No models found in the database.")
         else:
             print(f"Found {len(rows)} models:")
-            print("-" * 100)
+            print("-" * 120)
             print(f"{'ID':<5} {'Filename':<30} {'Type':<15} {'Size (MB)':<10} {'Use Count':<10} {'Last Used':<25} {'Downloaded':<25}")
-            print("-" * 100)
+            print(f"{'Path':^120}")
+            print("-" * 120)
             
             for row in rows:
                 size_mb = row['size_bytes'] / (1024 * 1024) if row['size_bytes'] else 0
                 print(f"{row['id']:<5} {row['filename']:<30} {row['model_type']:<15} {size_mb:<10.2f} {row['use_count']:<10} {row['last_used']:<25} {row['download_date']:<25}")
+                print(f"Path: {row['path']}")
+                print("-" * 120)
     
     elif command == "settings":
         # Query all settings
@@ -123,13 +126,16 @@ def main():
             print("No models found in the database.")
         else:
             print(f"Found {len(rows)} least recently used models:")
-            print("-" * 100)
+            print("-" * 120)
             print(f"{'ID':<5} {'Filename':<30} {'Type':<15} {'Size (MB)':<10} {'Use Count':<10} {'Last Used':<25} {'Downloaded':<25}")
-            print("-" * 100)
+            print(f"{'Path':^120}")
+            print("-" * 120)
             
             for row in rows:
                 size_mb = row['size_bytes'] / (1024 * 1024) if row['size_bytes'] else 0
                 print(f"{row['id']:<5} {row['filename']:<30} {row['model_type']:<15} {size_mb:<10.2f} {row['use_count']:<10} {row['last_used']:<25} {row['download_date']:<25}")
+                print(f"Path: {row['path']}")
+                print("-" * 120)
     
     elif command == "stats":
         # Get statistics about the models

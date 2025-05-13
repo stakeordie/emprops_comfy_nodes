@@ -19,6 +19,7 @@ from .nodes.emprops_image_loader import EmpropsImageLoader
 from .nodes.emprops_text_s3_saver import EmProps_Text_S3_Saver
 from .nodes.emprops_text_cloud_storage_saver import EmpropsTextCloudStorageSaver, EmProps_Text_S3_Saver as EmProps_Text_S3_Saver_New  # Added: 2025-04-24T15:20:02-04:00
 from .nodes.emprops_asset_downloader import EmProps_Asset_Downloader  # Added: 2025-05-12T13:52:12-04:00
+from .nodes.emprops_checkpoint_loader import EmProps_Checkpoint_Loader  # Added: 2025-05-13T09:42:00-04:00
 
 log_debug("Starting EmProps initialization")
 log_debug(f"Python path: {sys.path}")
@@ -69,6 +70,7 @@ try:
     "EmProps_Text_S3_Saver": EmProps_Text_S3_Saver_New,  # Updated: 2025-04-24T15:20:02-04:00
     "EmProps_Text_Cloud_Storage_Saver": EmpropsTextCloudStorageSaver,  # Added: 2025-04-24T15:20:02-04:00
     "EmProps_Asset_Downloader": EmProps_Asset_Downloader,  # Added: 2025-05-12T13:52:12-04:00
+    "EmProps_Checkpoint_Loader": EmProps_Checkpoint_Loader,  # Added: 2025-05-13T09:42:00-04:00
 }
     log_debug(f"NODE_CLASS_MAPPINGS created successfully with {len(NODE_CLASS_MAPPINGS)} entries")
     for node_name, node_class in NODE_CLASS_MAPPINGS.items():
@@ -87,6 +89,7 @@ try:
     "EmProps_Text_S3_Saver": "EmProps Text S3 Saver (Legacy)",  # Updated: 2025-04-24T15:20:02-04:00
     "EmProps_Text_Cloud_Storage_Saver": "EmProps Text Cloud Storage Saver",  # Added: 2025-04-24T15:20:02-04:00
     "EmProps_Asset_Downloader": "EmProps Asset Downloader",  # Added: 2025-05-12T13:52:12-04:00
+    "EmProps_Checkpoint_Loader": "EmProps Checkpoint Loader",  # Added: 2025-05-13T09:42:00-04:00
 }
     log_debug(f"NODE_DISPLAY_NAME_MAPPINGS created successfully with {len(NODE_DISPLAY_NAME_MAPPINGS)} entries")
 except Exception as e:

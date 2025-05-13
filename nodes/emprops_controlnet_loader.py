@@ -4,6 +4,8 @@ import traceback
 from server import PromptServer
 import folder_paths
 import comfy.controlnet
+# Added: 2025-05-13T17:20:00-04:00 - Import model cache database
+from ..db.model_cache import model_cache_db
 
 # Added: 2025-05-13T16:59:30-04:00 - Custom ControlNet loader implementation
 def log_debug(message):
@@ -97,6 +99,14 @@ class EmProps_ControlNet_Loader:
             
             # Load the ControlNet model
             controlnet = comfy.controlnet.load_controlnet(controlnet_path)
+            
+            # Added: 2025-05-13T17:20:00-04:00 - Update model usage in cache database
+            try:
+                model_cache_db.update_model_usage(controlnet_path)
+                log_debug(f"Updated model usage in cache database: {controlnet_path}")
+            except Exception as e:
+                log_debug(f"Error updating model usage in cache database: {str(e)}")
+                # Non-critical error, continue with loading
             
             # Send completion progress
             if node_id:

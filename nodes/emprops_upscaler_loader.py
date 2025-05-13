@@ -4,6 +4,8 @@ import traceback
 from server import PromptServer
 import folder_paths
 import comfy.utils
+# Added: 2025-05-13T17:19:00-04:00 - Import model cache database
+from ..db.model_cache import model_cache_db
 
 # Added: 2025-05-13T16:58:00-04:00 - Custom Upscaler loader implementation
 def log_debug(message):
@@ -97,6 +99,14 @@ class EmProps_Upscaler_Loader:
             
             # Load the upscaler model
             upscaler = comfy.utils.load_torch_file(upscaler_path)
+            
+            # Added: 2025-05-13T17:19:00-04:00 - Update model usage in cache database
+            try:
+                model_cache_db.update_model_usage(upscaler_path)
+                log_debug(f"Updated model usage in cache database: {upscaler_path}")
+            except Exception as e:
+                log_debug(f"Error updating model usage in cache database: {str(e)}")
+                # Non-critical error, continue with loading
             
             # Send completion progress
             if node_id:

@@ -3,6 +3,13 @@
 ## 2025-05-13
 
 ### Added
+- Added model cache database system (2025-05-13T17:25:00-04:00)
+  - Implemented SQLite database for tracking model usage
+  - Records when models are downloaded and used
+  - Tracks file size, type, and usage frequency
+  - Lays foundation for future storage management features
+  - Integrated with all loader nodes and asset downloader
+
 - Added additional model loader nodes (2025-05-13T17:00:00-04:00)
   - Added `EmProps_VAE_Loader` for loading VAE models
   - Added `EmProps_Upscaler_Loader` for loading upscaler models

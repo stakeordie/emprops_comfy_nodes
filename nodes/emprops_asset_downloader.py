@@ -8,6 +8,8 @@ import traceback
 from tqdm import tqdm
 from server import PromptServer
 import folder_paths  # Updated: 2025-05-12T14:04:35-04:00 - Use folder_paths module instead of direct import
+# Added: 2025-05-13T17:15:00-04:00 - Import model cache database
+from ..db.model_cache import model_cache_db
 
 # Added: 2025-05-12T13:52:12-04:00 - Asset Downloader implementation
 def log_debug(message):
@@ -235,6 +237,14 @@ class EmProps_Asset_Downloader:
                     os.remove(temp_path)
                 raise e
             log_debug(f"Complete! {filename} saved to {save_path}")
+            
+            # Added: 2025-05-13T17:15:00-04:00 - Register the model in the cache database
+            try:
+                file_size = os.path.getsize(save_path)
+                model_cache_db.register_model(save_path, save_to, file_size)
+                log_debug(f"Registered model in cache database: {save_path}")
+            except Exception as e:
+                log_debug(f"Error registering model in cache database: {str(e)}")
             
             # Updated: 2025-05-12T14:08:00-04:00 - Refresh model cache
             log_debug(f"Refreshing model cache for {save_to}")

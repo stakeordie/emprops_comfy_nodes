@@ -4,8 +4,6 @@ import traceback
 from server import PromptServer
 import folder_paths
 import comfy.sd
-# Added: 2025-05-13T17:17:00-04:00 - Import model cache database
-from ..db.model_cache import model_cache_db
 
 # Added: 2025-05-13T09:41:00-04:00 - Custom checkpoint loader implementation
 def log_debug(message):
@@ -104,14 +102,6 @@ class EmProps_Checkpoint_Loader:
                 output_clip=True, 
                 embedding_directory=folder_paths.get_folder_paths("embeddings")
             )
-            
-            # Added: 2025-05-13T17:17:00-04:00 - Update model usage in cache database
-            try:
-                model_cache_db.update_model_usage(ckpt_path)
-                log_debug(f"Updated model usage in cache database: {ckpt_path}")
-            except Exception as e:
-                log_debug(f"Error updating model usage in cache database: {str(e)}")
-                # Non-critical error, continue with loading
             
             # Send completion progress
             if node_id:

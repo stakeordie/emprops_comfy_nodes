@@ -2,24 +2,12 @@ import os
 import requests
 import sys
 import time
-import traceback
 from tqdm import tqdm
 import folder_paths  # type: ignore # Custom module without stubs
 from nodes import LoraLoader
 from dotenv import load_dotenv
 # 2025-04-27 21:05: Updated imports to support multiple cloud providers
 from ..utils import unescape_env_value, S3Handler, GCSHandler, AzureHandler, GCS_AVAILABLE, AZURE_AVAILABLE
-# Added: 2025-05-13T17:21:00-04:00 - Import model cache database
-from ..db.model_cache import model_cache_db
-
-# Added: 2025-05-13T17:22:00-04:00 - Debug logging function
-def log_debug(message):
-    """Enhanced logging function with timestamp and stack info"""
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    caller = traceback.extract_stack()[-2]
-    file = os.path.basename(caller.filename)
-    line = caller.lineno
-    print(f"[EmProps DEBUG {timestamp}] [{file}:{line}] {message}", flush=True)
 
 class EmProps_Lora_Loader:
     """
@@ -222,17 +210,6 @@ class EmProps_Lora_Loader:
                 strength_model,
                 strength_clip
             )
-            
-            # Added: 2025-05-13T17:25:00-04:00 - Update model usage in cache database
-            try:
-                # Get the full path to the LoRA file
-                lora_full_path = folder_paths.get_full_path("loras", lora_name)
-                if lora_full_path:
-                    model_cache_db.update_model_usage(lora_full_path)
-                    log_debug(f"Updated model usage in cache database: {lora_full_path}")
-            except Exception as e:
-                log_debug(f"Error updating model usage in cache database: {str(e)}")
-                # Non-critical error, continue with loading
             
             return (model_lora, clip_lora)
             

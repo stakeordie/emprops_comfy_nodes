@@ -2,6 +2,14 @@
 
 ## 2025-05-13
 
+### Added
+- Added additional model loader nodes (2025-05-13T17:00:00-04:00)
+  - Added `EmProps_VAE_Loader` for loading VAE models
+  - Added `EmProps_Upscaler_Loader` for loading upscaler models
+  - Added `EmProps_ControlNet_Loader` for loading ControlNet models
+  - All loaders include cache refresh and retry mechanisms
+  - Compatible with the asset downloader for seamless workflows
+
 ### Fixed
 - Fixed `EmProps_Asset_Downloader` node (2025-05-13T16:10:33-04:00)
   - Standardized return values across all code paths to ensure consistent format

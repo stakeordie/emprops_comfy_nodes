@@ -100,7 +100,47 @@ class EmProps_Asset_Downloader:
             if not has_enough_space:
                 log_debug(f"WARNING: Low disk space! Free: {space_info['free_gb']:.2f} GB, Minimum: {space_info['min_free_gb']:.2f} GB")
                 log_debug(f"Will need to evict least recently used models before downloading new ones")
-                # TODO: Implement model eviction based on LRU policy
+                
+                # Added: 2025-05-13T18:17:12-04:00 - Identify files that would be deleted
+                try:
+                    # Calculate how much space we need to free up
+                    space_needed_bytes = (space_info['min_free_bytes'] + space_info.get('required_bytes', 0)) - space_info['free_bytes']
+                    space_needed_gb = space_needed_bytes / (1024 * 1024 * 1024)
+                    log_debug(f"Need to free up approximately {space_needed_gb:.2f} GB of space")
+                    
+                    # Get least recently used models that aren't protected
+                    # We'll get more than we need to ensure we have enough options
+                    lru_models = model_cache_db.get_least_recently_used_models(limit=10)
+                    
+                    if lru_models:
+                        log_debug(f"Found {len(lru_models)} candidate models for deletion:")
+                        total_reclaimable_bytes = 0
+                        models_to_delete = []
+                        
+                        for model in lru_models:
+                            model_size_gb = model['size_bytes'] / (1024 * 1024 * 1024)
+                            log_debug(f"  - {model['filename']} ({model_size_gb:.2f} GB)")
+                            log_debug(f"    Last used: {model['last_used']}, Use count: {model['use_count']}")
+                            
+                            total_reclaimable_bytes += model['size_bytes']
+                            models_to_delete.append(model)
+                            
+                            # Check if we've identified enough models to delete
+                            if total_reclaimable_bytes >= space_needed_bytes:
+                                reclaimable_gb = total_reclaimable_bytes / (1024 * 1024 * 1024)
+                                log_debug(f"Identified {len(models_to_delete)} models that could free up {reclaimable_gb:.2f} GB")
+                                break
+                        
+                        if total_reclaimable_bytes < space_needed_bytes:
+                            reclaimable_gb = total_reclaimable_bytes / (1024 * 1024 * 1024)
+                            log_debug(f"WARNING: Could only identify {reclaimable_gb:.2f} GB of reclaimable space, need {space_needed_gb:.2f} GB")
+                    else:
+                        log_debug("No candidate models found for deletion. All models may be protected.")
+                        
+                    # TODO: Implement actual model deletion
+                except Exception as e:
+                    log_debug(f"Error identifying files for deletion: {str(e)}")
+                    log_debug(traceback.format_exc())
         except Exception as e:
             log_debug(f"Error checking disk space: {str(e)}")
             log_debug(traceback.format_exc())

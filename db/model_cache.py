@@ -115,6 +115,11 @@ class ModelCacheDB:
             
             current_time = datetime.now().isoformat()
             
+            # Get current use count for logging
+            cursor.execute('SELECT use_count FROM models WHERE path = ?', (path,))
+            row = cursor.fetchone()
+            old_count = row[0] if row else 0
+            
             # Update the model usage
             cursor.execute('''
             UPDATE models 
@@ -122,8 +127,14 @@ class ModelCacheDB:
             WHERE path = ?
             ''', (current_time, path))
             
+            # If rows were affected, log the update
+            if cursor.rowcount > 0:
+                log_debug(f"Updated model usage in database: {path}")
+                log_debug(f"Incremented use_count from {old_count} to {old_count + 1}")
+                log_debug(f"Updated last_used timestamp to {current_time}")
+            
             # If no rows were affected, the model doesn't exist in the database
-            if cursor.rowcount == 0:
+            else:
                 # Try to get the file size
                 size_bytes = 0
                 if os.path.exists(path):

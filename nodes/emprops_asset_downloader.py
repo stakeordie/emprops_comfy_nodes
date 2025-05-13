@@ -171,20 +171,30 @@ class EmProps_Asset_Downloader:
             log_debug(f"EmProps_Asset_Downloader: File already exists: {os.path.join(save_to, filename)}")
             
             # Added: 2025-05-13T17:28:11-04:00 - Update usage information for existing model
+            # Updated: 2025-05-13T17:48:26-04:00 - Added more detailed logging
             try:
                 file_size = os.path.getsize(save_path)
                 # Check if model exists in database
                 model_info = model_cache_db.get_model_info(save_path)
+                
+                log_debug(f"Checking model in database: {save_path}")
                 if model_info:
+                    log_debug(f"Model found in database with ID: {model_info['id']}")
+                    log_debug(f"Current use count: {model_info['use_count']}")
+                    log_debug(f"Last used: {model_info['last_used']}")
+                    
                     # Update existing model usage
+                    log_debug(f"Updating usage for existing model...")
                     model_cache_db.update_model_usage(save_path)
-                    log_debug(f"Updated usage for existing model in cache database: {save_path}")
+                    log_debug(f"Successfully updated usage for existing model in cache database")
                 else:
+                    log_debug(f"Model not found in database, registering it...")
                     # Register model if it's not in the database
                     model_cache_db.register_model(save_path, save_to, file_size)
-                    log_debug(f"Registered existing model in cache database: {save_path}")
+                    log_debug(f"Successfully registered existing model in cache database")
             except Exception as e:
                 log_debug(f"Error updating model in cache database: {str(e)}")
+                log_debug(traceback.format_exc())
             
             # Updated: 2025-05-12T15:15:00-04:00 - Return just the filename for compatibility with checkpoint loader
             # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format with both values

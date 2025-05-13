@@ -65,12 +65,14 @@ class EmProps_Asset_Downloader:
         
         if not url or not save_to or not filename:
             log_debug(f"EmProps_Asset_Downloader: Missing required values: url='{url}', save_to='{save_to}', filename='{filename}'")
-            return ()
+            # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format
+            return ("", "")
             
         # Updated: 2025-05-12T14:04:35-04:00 - Use folder_paths to get the correct folder path
         if save_to not in folder_paths.folder_names_and_paths:
             log_debug(f"EmProps_Asset_Downloader: Invalid save_to path: {save_to}. Must be a valid model folder.")
-            return ()
+            # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format
+            return ("", "")
             
         # Get the first folder path for the selected model type
         model_folder = folder_paths.get_folder_paths(save_to)[0]
@@ -106,7 +108,8 @@ class EmProps_Asset_Downloader:
             
             if not os.path.exists(source_path):
                 log_debug(f"EmProps_Asset_Downloader: Source file does not exist: {source_path}")
-                return ("Source file not found",)
+                # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format
+                return ("Source file not found", "")
                 
             log_debug(f"EmProps_Asset_Downloader: Copying {source_path} to {save_path}")
             
@@ -158,14 +161,16 @@ class EmProps_Asset_Downloader:
                 log_debug(f"Error copying file: {str(e)}")
                 if os.path.exists(save_path):
                     os.remove(save_path)
-                return (f"Error: {str(e)}",)
+                # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format
+                return (f"Error: {str(e)}", "")
         
         # Normal download mode - check if file already exists
         if os.path.exists(save_path):
             log_debug(f"EmProps_Asset_Downloader: File already exists: {os.path.join(save_to, filename)}")
             # Updated: 2025-05-12T15:15:00-04:00 - Return just the filename for compatibility with checkpoint loader
+            # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format with both values
             log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
-            return (filename,)
+            return (filename, filename)
 
         log_debug(f'EmProps_Asset_Downloader: Downloading {url} to {os.path.join(save_to, filename)} {" with token" if token else ""}')
         self.node_id = node_id
@@ -241,8 +246,9 @@ class EmProps_Asset_Downloader:
             folder_paths.get_filename_list(save_to)
             
             # Updated: 2025-05-12T15:15:00-04:00 - Return just the filename for compatibility with checkpoint loader
+            # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format with both values
             log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
-            return (filename,)
+            return (filename, filename)
 
         except Exception as e:
             log_debug(f"Error downloading file: {str(e)}")

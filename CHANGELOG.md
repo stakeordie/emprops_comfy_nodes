@@ -3,6 +3,12 @@
 ## 2025-05-13
 
 ### Fixed
+- Fixed `EmProps_Asset_Downloader` node (2025-05-13T16:10:33-04:00)
+  - Standardized return values across all code paths to ensure consistent format
+  - Made all functions return a tuple with both values (downloaded_path, ckpt_name)
+  - Prevents None values from being passed to the checkpoint loader
+  - Ensures proper connection with EmProps_Checkpoint_Loader node
+
 - Fixed `EmProps_Asset_Downloader` node (2025-05-13T16:04:00-04:00)
   - Fixed return type declaration to be STRING instead of list of checkpoints
   - Ensures proper connection with checkpoint loader nodes

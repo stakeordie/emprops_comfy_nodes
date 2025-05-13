@@ -30,7 +30,7 @@ class ModelCacheDB:
             return cls._instance
     
     def __init__(self):
-        """Initialize the database connection and create tables if they don't exist"""
+        """Initialize the database connection"""
         if self._initialized:
             return
             
@@ -39,55 +39,15 @@ class ModelCacheDB:
         self.db_path = os.path.join(module_dir, 'model_cache.db')
         log_debug(f"Model cache database path: {self.db_path}")
         
-        # Create database directory if it doesn't exist
-        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        
-        # Initialize the database
-        self._init_db()
+        # Database should already be initialized by init_db.py
+        # Just verify it exists
+        if not os.path.exists(self.db_path):
+            log_debug(f"Warning: Database file not found at {self.db_path}")
+            log_debug("Attempting to initialize database...")
+            from .init_db import init_db
+            init_db()
         
         self._initialized = True
-    
-    def _init_db(self):
-        """Initialize the database schema"""
-        try:
-            log_debug("Initializing model cache database")
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Create models table
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS models (
-                id INTEGER PRIMARY KEY,
-                path TEXT UNIQUE,
-                model_type TEXT,
-                filename TEXT,
-                size_bytes INTEGER,
-                last_used TIMESTAMP,
-                use_count INTEGER DEFAULT 0,
-                download_date TIMESTAMP,
-                protected BOOLEAN DEFAULT 0
-            )
-            ''')
-            
-            # Create settings table
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS settings (
-                key TEXT PRIMARY KEY,
-                value TEXT
-            )
-            ''')
-            
-            # Initialize default settings if they don't exist
-            cursor.execute('''
-            INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)
-            ''', ('min_free_space_gb', '10'))
-            
-            conn.commit()
-            conn.close()
-            log_debug("Database initialization complete")
-        except Exception as e:
-            log_debug(f"Error initializing database: {str(e)}")
-            raise e
     
     def register_model(self, path, model_type, size_bytes):
         """

@@ -88,6 +88,23 @@ class EmProps_Asset_Downloader:
         # Construct the full save path
         save_path = os.path.join(model_folder, filename)
         
+        # Added: 2025-05-13T18:10:44-04:00 - Check free disk space before downloading
+        try:
+            # We don't know the file size in advance, so we'll use 0 for required_bytes
+            # This will just check against the minimum free space setting
+            has_enough_space, space_info = model_cache_db.check_free_space(model_folder)
+            
+            log_debug(f"Checking free disk space for model folder: {model_folder}")
+            log_debug(f"Free space: {space_info['free_gb']:.2f} GB, Minimum required: {space_info['min_free_gb']:.2f} GB")
+            
+            if not has_enough_space:
+                log_debug(f"WARNING: Low disk space! Free: {space_info['free_gb']:.2f} GB, Minimum: {space_info['min_free_gb']:.2f} GB")
+                log_debug(f"Will need to evict least recently used models before downloading new ones")
+                # TODO: Implement model eviction based on LRU policy
+        except Exception as e:
+            log_debug(f"Error checking disk space: {str(e)}")
+            log_debug(traceback.format_exc())
+        
         # Added: 2025-05-12T14:42:00-04:00 - Test with copy mode
         if test_with_copy:
             log_debug(f"EmProps_Asset_Downloader: Test with copy mode enabled")

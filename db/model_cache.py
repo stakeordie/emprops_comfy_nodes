@@ -2,6 +2,7 @@ import os
 import sqlite3
 import time
 import traceback
+import shutil
 from datetime import datetime
 import threading
 
@@ -332,6 +333,56 @@ class ModelCacheDB:
         except Exception as e:
             log_debug(f"Error getting setting: {str(e)}")
             return default
+    
+    # Added: 2025-05-13T18:10:44-04:00 - Function to check free disk space
+    def check_free_space(self, path, required_bytes=0):
+        """
+        Check if there is enough free space on the disk
+        
+        Args:
+            path (str): Path to check free space for
+            required_bytes (int): Required free space in bytes
+            
+        Returns:
+            tuple: (bool, dict) - (True if enough space, info dict with free space details)
+        """
+        try:
+            # Get the directory to check
+            check_dir = path
+            if os.path.isfile(path):
+                check_dir = os.path.dirname(path)
+            
+            # Get disk usage statistics
+            disk_usage = shutil.disk_usage(check_dir)
+            free_bytes = disk_usage.free
+            total_bytes = disk_usage.total
+            
+            # Get minimum free space setting from database (in GB)
+            min_free_space_gb = float(self.get_setting('min_free_space_gb', '10'))
+            min_free_bytes = min_free_space_gb * 1024 * 1024 * 1024
+            
+            # Calculate if we have enough space
+            has_enough_space = free_bytes >= (min_free_bytes + required_bytes)
+            
+            # Prepare info dictionary
+            space_info = {
+                'free_bytes': free_bytes,
+                'free_gb': free_bytes / (1024 * 1024 * 1024),
+                'total_bytes': total_bytes,
+                'total_gb': total_bytes / (1024 * 1024 * 1024),
+                'min_free_bytes': min_free_bytes,
+                'min_free_gb': min_free_space_gb,
+                'required_bytes': required_bytes,
+                'required_gb': required_bytes / (1024 * 1024 * 1024) if required_bytes > 0 else 0,
+                'has_enough_space': has_enough_space
+            }
+            
+            return has_enough_space, space_info
+            
+        except Exception as e:
+            log_debug(f"Error checking free space: {str(e)}")
+            # Return True to avoid blocking downloads if we can't check
+            return True, {'error': str(e)}
     
     def set_setting(self, key, value):
         """

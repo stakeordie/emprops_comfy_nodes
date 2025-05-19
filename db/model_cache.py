@@ -50,7 +50,7 @@ class ModelCacheDB:
         
         self._initialized = True
     
-    def register_model(self, path, model_type, size_bytes):
+    def register_model(self, path, model_type, size_bytes, is_ignore=False):
         """
         Register a model in the database when it's downloaded
         
@@ -58,12 +58,13 @@ class ModelCacheDB:
             path (str): Full path to the model file
             model_type (str): Type of model (checkpoint, lora, vae, etc.)
             size_bytes (int): Size of the model in bytes
+            is_ignore (bool): Whether this model should be ignored for LRU eviction
         
         Returns:
             bool: True if successful, False otherwise
         """
         try:
-            log_debug(f"Registering model: {path}")
+            log_debug(f"Registering model: {path} (is_ignore={is_ignore})")
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
@@ -71,32 +72,36 @@ class ModelCacheDB:
             filename = os.path.basename(path)
             
             # Check if the model already exists
-            cursor.execute('SELECT id FROM models WHERE path = ?', (path,))
+            cursor.execute('SELECT id, is_ignore FROM models WHERE path = ?', (path,))
             existing = cursor.fetchone()
             
             current_time = datetime.now().isoformat()
             
             if existing:
-                # Update existing model
+                # Don't change is_ignore status if it already exists
+                existing_is_ignore = existing[1] if len(existing) > 1 else 0
+                
+                # Update existing model but preserve is_ignore status
                 cursor.execute('''
                 UPDATE models 
                 SET size_bytes = ?, last_used = ?, use_count = use_count + 1
                 WHERE path = ?
                 ''', (size_bytes, current_time, path))
-                log_debug(f"Updated existing model: {path}")
+                log_debug(f"Updated existing model: {path} (preserved is_ignore={existing_is_ignore})")
             else:
-                # Insert new model
+                # Insert new model with is_ignore flag
                 cursor.execute('''
-                INSERT INTO models (path, model_type, filename, size_bytes, last_used, use_count, download_date, protected)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (path, model_type, filename, size_bytes, current_time, 1, current_time, 0))
-                log_debug(f"Inserted new model: {path}")
+                INSERT INTO models (path, model_type, filename, size_bytes, last_used, use_count, download_date, protected, is_ignore)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (path, model_type, filename, size_bytes, current_time, 1, current_time, 0, 1 if is_ignore else 0))
+                log_debug(f"Inserted new model: {path} (is_ignore={is_ignore})")
             
             conn.commit()
             conn.close()
             return True
         except Exception as e:
             log_debug(f"Error registering model: {str(e)}")
+            log_debug(traceback.format_exc())
             return False
     
     def update_model_usage(self, path):
@@ -116,10 +121,11 @@ class ModelCacheDB:
             
             current_time = datetime.now().isoformat()
             
-            # Get current use count for logging
-            cursor.execute('SELECT use_count FROM models WHERE path = ?', (path,))
+            # Get current use count and is_ignore status for logging
+            cursor.execute('SELECT use_count, is_ignore FROM models WHERE path = ?', (path,))
             row = cursor.fetchone()
-            old_count = row[0] if row else 0
+            old_count = row[0] if row and len(row) > 0 else 0
+            is_ignore = row[1] if row and len(row) > 1 else 0
             
             # Update the model usage
             cursor.execute('''
@@ -133,6 +139,7 @@ class ModelCacheDB:
                 log_debug(f"Updated model usage in database: {path}")
                 log_debug(f"Incremented use_count from {old_count} to {old_count + 1}")
                 log_debug(f"Updated last_used timestamp to {current_time}")
+                log_debug(f"Model is_ignore status: {bool(is_ignore)}")
             
             # If no rows were affected, the model doesn't exist in the database
             else:
@@ -149,19 +156,20 @@ class ModelCacheDB:
                     if models_index + 1 < len(path_parts):
                         model_type = path_parts[models_index + 1]
                 
-                # Insert the model
+                # Insert the model with is_ignore=False (since it's a newly discovered model)
                 filename = os.path.basename(path)
                 cursor.execute('''
-                INSERT INTO models (path, model_type, filename, size_bytes, last_used, use_count, download_date, protected)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (path, model_type, filename, size_bytes, current_time, 1, current_time, 0))
-                log_debug(f"Added missing model to database: {path}")
+                INSERT INTO models (path, model_type, filename, size_bytes, last_used, use_count, download_date, protected, is_ignore)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (path, model_type, filename, size_bytes, current_time, 1, current_time, 0, 0))
+                log_debug(f"Added missing model to database: {path} (is_ignore=False)")
             
             conn.commit()
             conn.close()
             return True
         except Exception as e:
             log_debug(f"Error updating model usage: {str(e)}")
+            log_debug(traceback.format_exc())
             return False
     
     def get_model_info(self, path):
@@ -179,7 +187,7 @@ class ModelCacheDB:
             cursor = conn.cursor()
             
             cursor.execute('''
-            SELECT id, path, model_type, filename, size_bytes, last_used, use_count, download_date, protected
+            SELECT id, path, model_type, filename, size_bytes, last_used, use_count, download_date, protected, is_ignore
             FROM models
             WHERE path = ?
             ''', (path,))
@@ -197,7 +205,8 @@ class ModelCacheDB:
                     'last_used': row[5],
                     'use_count': row[6],
                     'download_date': row[7],
-                    'protected': bool(row[8])
+                    'protected': bool(row[8]),
+                    'is_ignore': bool(row[9]) if len(row) > 9 else False
                 }
             return None
         except Exception as e:
@@ -206,17 +215,18 @@ class ModelCacheDB:
     
     def get_all_models(self):
         """
-        Get information about all models
+        Get a list of all models in the database
         
         Returns:
-            list: List of model information dictionaries
+            list: List of model dictionaries
         """
         try:
             conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
             cursor.execute('''
-            SELECT id, path, model_type, filename, size_bytes, last_used, use_count, download_date, protected
+            SELECT id, path, model_type, filename, size_bytes, last_used, use_count, download_date, protected, is_ignore
             FROM models
             ORDER BY last_used DESC
             ''')
@@ -227,39 +237,43 @@ class ModelCacheDB:
             models = []
             for row in rows:
                 models.append({
-                    'id': row[0],
-                    'path': row[1],
-                    'model_type': row[2],
-                    'filename': row[3],
-                    'size_bytes': row[4],
-                    'last_used': row[5],
-                    'use_count': row[6],
-                    'download_date': row[7],
-                    'protected': bool(row[8])
+                    'id': row['id'],
+                    'path': row['path'],
+                    'model_type': row['model_type'],
+                    'filename': row['filename'],
+                    'size_bytes': row['size_bytes'],
+                    'last_used': row['last_used'],
+                    'use_count': row['use_count'],
+                    'download_date': row['download_date'],
+                    'protected': bool(row['protected']),
+                    'is_ignore': bool(row['is_ignore']) if 'is_ignore' in row.keys() else False
                 })
+            
             return models
         except Exception as e:
             log_debug(f"Error getting all models: {str(e)}")
+            log_debug(traceback.format_exc())
             return []
     
     def get_least_recently_used_models(self, limit=10):
         """
-        Get the least recently used models
+        Get a list of least recently used models that aren't protected and aren't marked as ignore
         
         Args:
             limit (int): Maximum number of models to return
         
         Returns:
-            list: List of model information dictionaries
+            list: List of model dictionaries
         """
         try:
             conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
             cursor.execute('''
-            SELECT id, path, model_type, filename, size_bytes, last_used, use_count, download_date, protected
+            SELECT id, path, model_type, filename, size_bytes, last_used, use_count, download_date, protected, is_ignore
             FROM models
-            WHERE protected = 0
+            WHERE protected = 0 AND is_ignore = 0
             ORDER BY last_used ASC
             LIMIT ?
             ''', (limit,))
@@ -270,19 +284,23 @@ class ModelCacheDB:
             models = []
             for row in rows:
                 models.append({
-                    'id': row[0],
-                    'path': row[1],
-                    'model_type': row[2],
-                    'filename': row[3],
-                    'size_bytes': row[4],
-                    'last_used': row[5],
-                    'use_count': row[6],
-                    'download_date': row[7],
-                    'protected': bool(row[8])
+                    'id': row['id'],
+                    'path': row['path'],
+                    'model_type': row['model_type'],
+                    'filename': row['filename'],
+                    'size_bytes': row['size_bytes'],
+                    'last_used': row['last_used'],
+                    'use_count': row['use_count'],
+                    'download_date': row['download_date'],
+                    'protected': bool(row['protected']),
+                    'is_ignore': bool(row['is_ignore']) if 'is_ignore' in row.keys() else False
                 })
+            
+            log_debug(f"Found {len(models)} least recently used models (excluding protected and ignored models)")
             return models
         except Exception as e:
             log_debug(f"Error getting least recently used models: {str(e)}")
+            log_debug(traceback.format_exc())
             return []
     
     def delete_model(self, path):

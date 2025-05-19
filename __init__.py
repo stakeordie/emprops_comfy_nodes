@@ -4,6 +4,9 @@ import folder_paths
 import traceback
 import time
 
+# Added: 2025-05-16T09:25:12-04:00 - Import database initialization module
+from .db.init_db import init_db
+
 # Added: 2025-04-20T19:47:26-04:00 - Enhanced logging for debugging
 def log_debug(message):
     """Enhanced logging function with timestamp and stack info"""
@@ -28,6 +31,16 @@ log_debug("Starting EmProps initialization")
 log_debug(f"Python path: {sys.path}")
 log_debug(f"Current working directory: {os.getcwd()}")
 log_debug(f"Module directory: {os.path.dirname(os.path.abspath(__file__))}")
+
+# Added: 2025-05-16T09:30:15-04:00 - Initialize model cache database
+log_debug("Initializing model cache database...")
+try:
+    # Initialize the database and load static models if needed
+    init_db()
+    log_debug("Model cache database initialization complete")
+except Exception as e:
+    log_debug(f"Error initializing model cache database: {str(e)}")
+    log_debug(traceback.format_exc())
 
 log_debug("Loading EmProps nodes")
 log_debug(f"Current directory: {os.path.dirname(os.path.abspath(__file__))}")

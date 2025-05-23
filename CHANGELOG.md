@@ -1,5 +1,14 @@
 # EmProps ComfyUI Nodes Changelog
 
+## 2025-05-22
+
+### Changed
+- Added environment variable control for debug logging (2025-05-22T20:06:19-04:00)
+  - Modified `log_debug` function to check for `EMPROPS_DEBUG_LOGGING` environment variable
+  - Debug logs will only be displayed when the variable is set to '1', 'true', 'yes', or 'on'
+  - Original code is preserved as comments for reference
+  - Reduces log verbosity while maintaining ability to debug when needed
+
 ## 2025-05-13
 
 ### Added

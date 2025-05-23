@@ -10,11 +10,19 @@ from .db.init_db import init_db
 # Added: 2025-04-20T19:47:26-04:00 - Enhanced logging for debugging
 def log_debug(message):
     """Enhanced logging function with timestamp and stack info"""
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    caller = traceback.extract_stack()[-2]
-    file = os.path.basename(caller.filename)
-    line = caller.lineno
-    print(f"[EmProps DEBUG {timestamp}] [{file}:{line}] {message}", flush=True)
+    # Updated: 2025-05-22T20:06:19-04:00 - Added environment variable control for debug logging
+    if os.environ.get('EMPROPS_DEBUG_LOGGING', '').lower() in ('1', 'true', 'yes', 'on'):
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        caller = traceback.extract_stack()[-2]
+        file = os.path.basename(caller.filename)
+        line = caller.lineno
+        print(f"[EmProps DEBUG {timestamp}] [{file}:{line}] {message}", flush=True)
+    # Original code commented out for reference
+    # timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    # caller = traceback.extract_stack()[-2]
+    # file = os.path.basename(caller.filename)
+    # line = caller.lineno
+    # print(f"[EmProps DEBUG {timestamp}] [{file}:{line}] {message}", flush=True)
 # Added: 2025-04-20T21:57:24-04:00 - Removed model downloader nodes
 from .nodes.emprops_lora_loader import EmProps_Lora_Loader
 from .nodes.emprops_cloud_storage_saver import EmpropsCloudStorageSaver

@@ -34,6 +34,8 @@ from .nodes.emprops_checkpoint_loader import EmProps_Checkpoint_Loader  # Added:
 from .nodes.emprops_vae_loader import EmProps_VAE_Loader  # Added: 2025-05-13T16:56:15-04:00
 from .nodes.emprops_upscaler_loader import EmProps_Upscaler_Loader  # Added: 2025-05-13T16:58:00-04:00
 from .nodes.emprops_controlnet_loader import EmProps_ControlNet_Loader  # Added: 2025-05-13T16:59:30-04:00
+from .nodes.emprops_dualclip_loader import EmProps_DualCLIP_Loader  # Added: 2025-05-30T10:25:09-04:00
+from .nodes.emprops_diffusion_model_loader import EmProps_Diffusion_Model_Loader  # Added: 2025-05-30T10:25:09-04:00
 
 log_debug("Starting EmProps initialization")
 log_debug(f"Python path: {sys.path}")
@@ -120,6 +122,8 @@ try:
     "EmProps_VAE_Loader": "EmProps VAE Loader",  # Added: 2025-05-13T16:56:15-04:00
     "EmProps_Upscaler_Loader": "EmProps Upscaler Loader",  # Added: 2025-05-13T16:58:00-04:00
     "EmProps_ControlNet_Loader": "EmProps ControlNet Loader",  # Added: 2025-05-13T16:59:30-04:00
+    "EmProps_DualCLIP_Loader": "EmProps DualCLIP Loader",  # Added: 2025-05-30T10:25:09-04:00
+    "EmProps_Diffusion_Model_Loader": "EmProps Diffusion Model Loader",  # Added: 2025-05-30T10:25:09-04:00
 }
     log_debug(f"NODE_DISPLAY_NAME_MAPPINGS created successfully with {len(NODE_DISPLAY_NAME_MAPPINGS)} entries")
 except Exception as e:

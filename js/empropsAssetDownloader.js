@@ -6,7 +6,16 @@ import { api } from "../../scripts/api.js"
 app.registerExtension({
     name: "EmProps Asset Downloader",
     async setup() {        
-        const nodeTypes = ["EmProps_Asset_Downloader"]
+        // [2025-05-30T10:25:09-04:00] Added new loader nodes to the list
+        const nodeTypes = [
+            "EmProps_Asset_Downloader",
+            "EmProps_Checkpoint_Loader",
+            "EmProps_VAE_Loader",
+            "EmProps_Upscaler_Loader",
+            "EmProps_ControlNet_Loader",
+            "EmProps_DualCLIP_Loader",
+            "EmProps_Diffusion_Model_Loader"
+        ]
         
         nodeTypes.forEach(nodeType => {
             const origNode = LiteGraph.registered_node_types[nodeType]

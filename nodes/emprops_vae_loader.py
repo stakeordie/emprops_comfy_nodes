@@ -4,6 +4,7 @@ import traceback
 from server import PromptServer
 import folder_paths
 import comfy.sd
+import comfy.utils  # Added: 2025-05-30T10:56:43-04:00 - For loading torch files
 
 # Added: 2025-05-13T16:56:15-04:00 - Custom VAE loader implementation
 def log_debug(message):
@@ -95,8 +96,11 @@ class EmProps_VAE_Loader:
                     "max": 100
                 })
             
-            # Load the VAE
-            vae = comfy.sd.VAE(vae_path)
+            # Load the VAE state dictionary from the file
+            # Fixed: 2025-05-30T10:56:43-04:00 - Load state dict before creating VAE
+            sd = comfy.utils.load_torch_file(vae_path)
+            vae = comfy.sd.VAE(sd=sd)
+            vae.throw_exception_if_invalid()
             
             # Send completion progress
             if node_id:

@@ -6,7 +6,7 @@ import { api } from "../../scripts/api.js"
 app.registerExtension({
     name: "EmProps Asset Downloader",
     async setup() {        
-        // [2025-05-30T10:25:09-04:00] Added new loader nodes to the list
+        // [2025-05-30T10:38:56-04:00] Updated node names to match ComfyUI structure
         const nodeTypes = [
             "EmProps_Asset_Downloader",
             "EmProps_Checkpoint_Loader",
@@ -14,7 +14,8 @@ app.registerExtension({
             "EmProps_Upscaler_Loader",
             "EmProps_ControlNet_Loader",
             "EmProps_DualCLIP_Loader",
-            "EmProps_Diffusion_Model_Loader"
+            "EmProps_Diffusion_Model_Loader", // Matches the class name in the Python file
+            "EmProps_CLIP_Loader" // Added: 2025-05-30T10:38:56-04:00
         ]
         
         nodeTypes.forEach(nodeType => {

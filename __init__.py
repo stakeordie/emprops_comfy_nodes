@@ -36,6 +36,7 @@ from .nodes.emprops_upscaler_loader import EmProps_Upscaler_Loader  # Added: 202
 from .nodes.emprops_controlnet_loader import EmProps_ControlNet_Loader  # Added: 2025-05-13T16:59:30-04:00
 from .nodes.emprops_dualclip_loader import EmProps_DualCLIP_Loader  # Added: 2025-05-30T10:25:09-04:00
 from .nodes.emprops_diffusion_model_loader import EmProps_Diffusion_Model_Loader  # Added: 2025-05-30T10:25:09-04:00
+from .nodes.emprops_clip_loader import EmProps_CLIP_Loader  # Added: 2025-05-30T10:25:09-04:00
 
 log_debug("Starting EmProps initialization")
 log_debug(f"Python path: {sys.path}")
@@ -102,6 +103,7 @@ try:
     "EmProps_ControlNet_Loader": EmProps_ControlNet_Loader,  # Added: 2025-05-13T16:59:30-04:00
     "EmProps_DualCLIP_Loader": EmProps_DualCLIP_Loader,  # Added: 2025-05-30T10:28:48-04:00
     "EmProps_Diffusion_Model_Loader": EmProps_Diffusion_Model_Loader,  # Added: 2025-05-30T10:28:48-04:00
+    "EmProps_CLIP_Loader": EmProps_CLIP_Loader,  # Added: 2025-05-30T10:38:56-04:00
 }
     log_debug(f"NODE_CLASS_MAPPINGS created successfully with {len(NODE_CLASS_MAPPINGS)} entries")
     for node_name, node_class in NODE_CLASS_MAPPINGS.items():
@@ -125,7 +127,8 @@ try:
     "EmProps_Upscaler_Loader": "EmProps Upscaler Loader",  # Added: 2025-05-13T16:58:00-04:00
     "EmProps_ControlNet_Loader": "EmProps ControlNet Loader",  # Added: 2025-05-13T16:59:30-04:00
     "EmProps_DualCLIP_Loader": "EmProps DualCLIP Loader",  # Added: 2025-05-30T10:25:09-04:00
-    "EmProps_Diffusion_Model_Loader": "EmProps Diffusion Model Loader",  # Added: 2025-05-30T10:25:09-04:00
+    "EmProps_Diffusion_Model_Loader": "EmProps Load Diffusion Model",  # Updated: 2025-05-30T10:38:56-04:00
+    "EmProps_CLIP_Loader": "EmProps Load CLIP",  # Added: 2025-05-30T10:38:56-04:00
 }
     log_debug(f"NODE_DISPLAY_NAME_MAPPINGS created successfully with {len(NODE_DISPLAY_NAME_MAPPINGS)} entries")
 except Exception as e:

@@ -5,8 +5,9 @@ from server import PromptServer
 import sys
 import folder_paths
 import comfy.sd
+import torch
 
-# [2025-05-30T10:20:00-04:00] Custom Diffusion Model loader implementation
+# [2025-05-30T10:38:56-04:00] Custom Diffusion Model loader implementation (UNETLoader)
 def log_debug(message):
     """Enhanced logging function with timestamp and stack info"""
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -17,45 +18,60 @@ def log_debug(message):
 
 class EmProps_Diffusion_Model_Loader:
     """
-    A custom diffusion model loader that explicitly loads files by name,
-    bypassing ComfyUI's selection mechanism. This ensures it can load
-    files that were downloaded during the current execution.
+    A custom diffusion model loader that matches the ComfyUI UNETLoader structure
+    but with EmProps' custom downloading and offloading capabilities.
     """
-    RETURN_TYPES = ("MODEL", "CLIP", "VAE")
-    RETURN_NAMES = ("MODEL", "CLIP", "VAE")
+    RETURN_TYPES = ("MODEL",)
+    RETURN_NAMES = ("MODEL",)
     OUTPUT_NODE = True
-    FUNCTION = "load_model"
+    FUNCTION = "load_unet"
     CATEGORY = "EmProps"
     
-    DESCRIPTION = "Loads a diffusion model checkpoint with EmProps' custom downloading and offloading capabilities."
+    DESCRIPTION = "Loads a diffusion model with EmProps' custom downloading and offloading capabilities."
     
     @classmethod
     def INPUT_TYPES(cls):
         log_debug("EmProps_Diffusion_Model_Loader.INPUT_TYPES called")
         return {
             "required": {
-                "model_name": ("STRING", {"multiline": False, "default": ""}),
+                "unet_name": ("STRING", {"multiline": False, "default": ""}),
+                "weight_dtype": ([
+                    "default", 
+                    "fp8_e4m3fn", 
+                    "fp8_e4m3fn_fast", 
+                    "fp8_e5m2"
+                ], {"default": "default"}),
             },
             "hidden": {
                 "node_id": "UNIQUE_ID"
             }
         }
 
-    def load_model(self, model_name, node_id=None):
-        log_debug(f"EmProps_Diffusion_Model_Loader.load_model called with model_name={model_name}, node_id={node_id}")
+    def load_unet(self, unet_name, weight_dtype="default", node_id=None):
+        log_debug(f"EmProps_Diffusion_Model_Loader.load_unet called with unet_name={unet_name}, weight_dtype={weight_dtype}, node_id={node_id}")
         
-        if not model_name:
+        if not unet_name:
             log_debug("EmProps_Diffusion_Model_Loader: No model name provided")
             raise ValueError("No model name provided")
         
+        # Set model options based on weight_dtype
+        model_options = {}
+        if weight_dtype == "fp8_e4m3fn":
+            model_options["dtype"] = torch.float8_e4m3fn
+        elif weight_dtype == "fp8_e4m3fn_fast":
+            model_options["dtype"] = torch.float8_e4m3fn
+            model_options["fp8_optimizations"] = True
+        elif weight_dtype == "fp8_e5m2":
+            model_options["dtype"] = torch.float8_e5m2
+        
         # Force refresh the cache to ensure we see the latest files
-        log_debug("EmProps_Diffusion_Model_Loader: Refreshing checkpoints cache")
-        if "checkpoints" in folder_paths.filename_list_cache:
-            del folder_paths.filename_list_cache["checkpoints"]
+        log_debug("EmProps_Diffusion_Model_Loader: Refreshing diffusion_models cache")
+        if "diffusion_models" in folder_paths.filename_list_cache:
+            del folder_paths.filename_list_cache["diffusion_models"]
         
         # Get the updated file list
-        checkpoint_files = folder_paths.get_filename_list("checkpoints")
-        log_debug(f"EmProps_Diffusion_Model_Loader: Available checkpoints: {checkpoint_files}")
+        model_files = folder_paths.get_filename_list("diffusion_models")
+        log_debug(f"EmProps_Diffusion_Model_Loader: Available diffusion models: {model_files}")
         
         # Check if the file exists
         max_attempts = 5
@@ -64,31 +80,31 @@ class EmProps_Diffusion_Model_Loader:
         
         while attempt < max_attempts:
             try:
-                log_debug(f"EmProps_Diffusion_Model_Loader: Attempt {attempt+1} to get path for {model_name}")
-                model_path = folder_paths.get_full_path("checkpoints", model_name)
+                log_debug(f"EmProps_Diffusion_Model_Loader: Attempt {attempt+1} to get path for {unet_name}")
+                model_path = folder_paths.get_full_path("diffusion_models", unet_name)
                 if model_path:
-                    log_debug(f"EmProps_Diffusion_Model_Loader: Found checkpoint at {model_path}")
+                    log_debug(f"EmProps_Diffusion_Model_Loader: Found model at {model_path}")
                     break
             except Exception as e:
                 log_debug(f"EmProps_Diffusion_Model_Loader: Error getting path: {str(e)}")
                 
             # If not found, wait a bit and try again (in case it's still being written)
-            log_debug(f"EmProps_Diffusion_Model_Loader: Checkpoint {model_name} not found, waiting...")
+            log_debug(f"EmProps_Diffusion_Model_Loader: Model {unet_name} not found, waiting...")
             time.sleep(1)
             
             # Refresh the cache again
-            if "checkpoints" in folder_paths.filename_list_cache:
-                del folder_paths.filename_list_cache["checkpoints"]
-            folder_paths.get_filename_list("checkpoints")
+            if "diffusion_models" in folder_paths.filename_list_cache:
+                del folder_paths.filename_list_cache["diffusion_models"]
+            folder_paths.get_filename_list("diffusion_models")
             
             attempt += 1
         
         if not model_path:
-            log_debug(f"EmProps_Diffusion_Model_Loader: Checkpoint {model_name} not found after {max_attempts} attempts")
-            raise ValueError(f"Checkpoint {model_name} not found after {max_attempts} attempts")
+            log_debug(f"EmProps_Diffusion_Model_Loader: Model {unet_name} not found after {max_attempts} attempts")
+            raise ValueError(f"Model {unet_name} not found after {max_attempts} attempts")
         
         # Load the model
-        log_debug(f"EmProps_Diffusion_Model_Loader: Loading model from {model_path}")
+        log_debug(f"EmProps_Diffusion_Model_Loader: Loading model from {model_path} with options {model_options}")
         try:
             # Send a progress update
             if node_id:
@@ -98,13 +114,8 @@ class EmProps_Diffusion_Model_Loader:
                     "max": 100
                 })
             
-            # Load the model
-            out = comfy.sd.load_checkpoint_guess_config(
-                model_path, 
-                output_vae=True, 
-                output_clip=True, 
-                embedding_directory=folder_paths.get_folder_paths("embeddings")
-            )
+            # Load the model using the same function as UNETLoader
+            model = comfy.sd.load_diffusion_model(model_path, model_options=model_options)
             
             # Send completion progress
             if node_id:
@@ -114,8 +125,8 @@ class EmProps_Diffusion_Model_Loader:
                     "max": 100
                 })
             
-            log_debug(f"EmProps_Diffusion_Model_Loader: Successfully loaded model {model_name}")
-            return out[:3]
+            log_debug(f"EmProps_Diffusion_Model_Loader: Successfully loaded model {unet_name}")
+            return (model,)
             
         except Exception as e:
             log_debug(f"EmProps_Diffusion_Model_Loader: Error loading model: {str(e)}")
@@ -128,5 +139,5 @@ NODE_CLASS_MAPPINGS = {
 
 # Human-readable names for the UI
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "EmProps_Diffusion_Model_Loader": "EmProps Diffusion Model Loader",
+    "EmProps_Diffusion_Model_Loader": "EmProps Load Diffusion Model",
 }

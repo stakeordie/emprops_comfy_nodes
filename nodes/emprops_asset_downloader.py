@@ -22,7 +22,20 @@ def log_debug(message):
 
 def model_folders():
     # Updated: 2025-05-12T14:04:35-04:00 - Get folder names from folder_paths
-    return sorted(list(folder_paths.folder_names_and_paths.keys()))
+    # Updated: 2025-05-30T10:38:56-04:00 - Added text_encoders to the list of folders
+    folders = sorted(list(folder_paths.folder_names_and_paths.keys()))
+    
+    # Make sure text_encoders is in the list (for CLIP models)
+    if "text_encoders" not in folders and "text_encoders" in folder_paths.folder_names_and_paths:
+        log_debug("Adding text_encoders folder to model folders list")
+        folders.append("text_encoders")
+        
+    # Make sure diffusion_models is in the list (for UNET models)
+    if "diffusion_models" not in folders and "diffusion_models" in folder_paths.folder_names_and_paths:
+        log_debug("Adding diffusion_models folder to model folders list")
+        folders.append("diffusion_models")
+        
+    return folders
 
 # Updated: 2025-05-12T14:04:35-04:00 - No longer needed as we use folder_paths
 

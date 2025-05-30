@@ -1,5 +1,15 @@
 # EmProps ComfyUI Nodes Changelog
 
+## 2025-05-30
+
+### Added
+- Added new loader nodes for advanced model loading (2025-05-30T10:30:57-04:00)
+  - Added `EmProps_DualCLIP_Loader` for loading dual CLIP models (for SDXL, SD3, Flux, etc.)
+  - Added `EmProps_Diffusion_Model_Loader` for loading diffusion models
+  - Both loaders include cache refresh and retry mechanisms
+  - Compatible with the asset downloader for seamless workflows
+  - Support progress indicators in the UI
+
 ## 2025-05-22
 
 ### Changed

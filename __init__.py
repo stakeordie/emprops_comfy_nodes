@@ -100,6 +100,8 @@ try:
     "EmProps_VAE_Loader": EmProps_VAE_Loader,  # Added: 2025-05-13T16:56:15-04:00
     "EmProps_Upscaler_Loader": EmProps_Upscaler_Loader,  # Added: 2025-05-13T16:58:00-04:00
     "EmProps_ControlNet_Loader": EmProps_ControlNet_Loader,  # Added: 2025-05-13T16:59:30-04:00
+    "EmProps_DualCLIP_Loader": EmProps_DualCLIP_Loader,  # Added: 2025-05-30T10:28:48-04:00
+    "EmProps_Diffusion_Model_Loader": EmProps_Diffusion_Model_Loader,  # Added: 2025-05-30T10:28:48-04:00
 }
     log_debug(f"NODE_CLASS_MAPPINGS created successfully with {len(NODE_CLASS_MAPPINGS)} entries")
     for node_name, node_class in NODE_CLASS_MAPPINGS.items():

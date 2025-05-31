@@ -10,6 +10,8 @@ from server import PromptServer
 import folder_paths  # Updated: 2025-05-12T14:04:35-04:00 - Use folder_paths module instead of direct import
 # Added: 2025-05-13T17:15:00-04:00 - Import model cache database
 from ..db.model_cache import model_cache_db
+# Added: 2025-05-31T14:30:00-04:00 - Import cloud storage handlers
+from ..utils import AzureHandler, S3Handler, GCSHandler
 
 # Added: 2025-05-12T13:52:12-04:00 - Asset Downloader implementation
 def log_debug(message):
@@ -59,11 +61,16 @@ class EmProps_Asset_Downloader:
         log_debug("EmProps_Asset_Downloader.INPUT_TYPES called")
         return {
             "required": {
-                "url": ("STRING", {"multiline": False, "default": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step.safetensors", "widget": True}),
+                # Added: 2025-05-31T14:30:00-04:00 - Cloud provider selection
+                "cloud_provider": (["None", "Azure", "AWS", "GCS"], {"default": "Azure", "widget": True}),
                 "save_to": (model_folders(), { "default": "checkpoints", "widget": True }),
                 "filename": ("STRING", {"multiline": False, "default": "sdxl_lightning_4step.safetensors", "widget": True}),
             },
             "optional": {
+                # Made URL optional since we can now use cloud providers
+                "url": ("STRING", {"multiline": False, "default": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step.safetensors", "widget": True}),
+                # Added: 2025-05-31T14:30:00-04:00 - Cloud path prefix
+                "cloud_path_prefix": ("STRING", {"multiline": False, "default": "", "placeholder": "Optional subfolder in cloud storage", "widget": True}),
                 "token": ("STRING", { "default": "", "multiline": False, "password": True, "widget": True }),
                 # Added: 2025-05-12T14:42:00-04:00 - Test mode checkbox for creating a copy instead of downloading
                 "test_with_copy": ("BOOLEAN", {"default": False, "label": "Test with copy"}),
@@ -75,13 +82,18 @@ class EmProps_Asset_Downloader:
             }
         }
 
-    def download(self, url, save_to, filename, node_id, token="", test_with_copy=False, source_filename=""):
-        log_debug(f"EmProps_Asset_Downloader.download called with url={url}, save_to={save_to}, filename={filename}, node_id={node_id}")
+    def download(self, cloud_provider, save_to, filename, node_id, url="", cloud_path_prefix="", token="", test_with_copy=False, source_filename=""):
+        log_debug(f"EmProps_Asset_Downloader.download called with cloud_provider={cloud_provider}, save_to={save_to}, filename={filename}, node_id={node_id}, url={url}")
         
-        if not url or not save_to or not filename:
-            log_debug(f"EmProps_Asset_Downloader: Missing required values: url='{url}', save_to='{save_to}', filename='{filename}'")
+        if not save_to or not filename:
+            log_debug(f"EmProps_Asset_Downloader: Missing required values: save_to='{save_to}', filename='{filename}'")
             # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format
             return ("", "")
+            
+        # Check if we have either a URL or a cloud provider selected
+        if cloud_provider == "None" and not url:
+            log_debug(f"EmProps_Asset_Downloader: No cloud provider selected and no URL provided")
+            return ("No download source specified", "")
             
         # Updated: 2025-05-12T14:04:35-04:00 - Use folder_paths to get the correct folder path
         if save_to not in folder_paths.folder_names_and_paths:
@@ -236,6 +248,83 @@ class EmProps_Asset_Downloader:
                 # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format
                 return (f"Error: {str(e)}", "")
         
+        # Added: 2025-05-31T14:30:00-04:00 - Cloud download mode
+        if cloud_provider != "None":
+            log_debug(f"EmProps_Asset_Downloader: Using cloud provider: {cloud_provider}")
+            
+            try:
+                # Initialize the appropriate cloud handler
+                cloud_handler = None
+                if cloud_provider == "Azure":
+                    log_debug(f"Initializing Azure handler")
+                    cloud_handler = AzureHandler()
+                    log_debug(f"Using Azure container: {cloud_handler.container_name}")
+                elif cloud_provider == "AWS":
+                    log_debug(f"Initializing AWS S3 handler")
+                    cloud_handler = S3Handler()
+                    log_debug(f"Using S3 bucket: {cloud_handler.bucket_name}")
+                elif cloud_provider == "GCS":
+                    log_debug(f"Initializing Google Cloud Storage handler")
+                    cloud_handler = GCSHandler()
+                    log_debug(f"Using GCS bucket: {cloud_handler.bucket_name}")
+                
+                if cloud_handler:
+                    # Construct the cloud path based on the model folder and filename
+                    # The path structure should match the local folder structure
+                    cloud_path = filename
+                    if cloud_path_prefix:
+                        cloud_path = f"{cloud_path_prefix.rstrip('/')}/{save_to}/{filename}"
+                    else:
+                        cloud_path = f"{save_to}/{filename}"
+                    
+                    log_debug(f"Attempting to download from cloud: {cloud_path} to {save_path}")
+                    
+                    # Download the file from cloud storage
+                    success, error_message = cloud_handler.download_file(cloud_path, save_path)
+                    
+                    if success:
+                        log_debug(f"Successfully downloaded file from cloud storage: {cloud_path}")
+                        
+                        # Refresh model cache
+                        log_debug(f"Refreshing model cache for {save_to}")
+                        if save_to in folder_paths.filename_list_cache:
+                            del folder_paths.filename_list_cache[save_to]
+                        folder_paths.get_filename_list(save_to)
+                        
+                        # Register the model in the cache database
+                        try:
+                            file_size = os.path.getsize(save_path)
+                            model_cache_db.register_model(save_path, save_to, file_size)
+                            log_debug(f"Registered model in cache database: {save_path}")
+                        except Exception as e:
+                            log_debug(f"Error registering model in cache database: {str(e)}")
+                        
+                        # Return both values
+                        log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
+                        return (filename, filename)
+                    else:
+                        log_debug(f"Failed to download file from cloud storage: {error_message}")
+                        # If URL is provided, fall back to URL download
+                        if url:
+                            log_debug(f"Falling back to URL download")
+                        else:
+                            return (f"Cloud download failed: {error_message}", "")
+                else:
+                    log_debug(f"Cloud handler not initialized properly")
+                    # If URL is provided, fall back to URL download
+                    if url:
+                        log_debug(f"Falling back to URL download")
+                    else:
+                        return ("Cloud handler initialization failed", "")
+            except Exception as e:
+                log_debug(f"Error during cloud download: {str(e)}")
+                log_debug(traceback.format_exc())
+                # If URL is provided, fall back to URL download
+                if url:
+                    log_debug(f"Falling back to URL download")
+                else:
+                    return (f"Cloud download error: {str(e)}", "")
+        
         # Normal download mode - check if file already exists
         if os.path.exists(save_path):
             log_debug(f"EmProps_Asset_Downloader: File already exists: {os.path.join(save_to, filename)}")
@@ -271,6 +360,11 @@ class EmProps_Asset_Downloader:
             log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
             return (filename, filename)
 
+        # URL download mode - only proceed if URL is provided
+        if not url:
+            log_debug(f"EmProps_Asset_Downloader: No URL provided and cloud download failed or not selected")
+            return ("No download source available", "")
+            
         log_debug(f'EmProps_Asset_Downloader: Downloading {url} to {os.path.join(save_to, filename)} {" with token" if token else ""}')
         self.node_id = node_id
 

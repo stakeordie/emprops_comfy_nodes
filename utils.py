@@ -434,11 +434,14 @@ class AzureHandler:
         if container_name:
             self.container_name = container_name
         else:
-            # First check for provider-agnostic container name
-            self.container_name = os.getenv('CLOUD_STORAGE_CONTAINER')
+            # Added: 2025-05-31T14:36:00-04:00 - Check for models-specific container first
+            self.container_name = os.getenv('CLOUD_MODELS_CONTAINER')
             if not self.container_name:
-                # Fall back to Azure-specific container name
-                self.container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'test')
+                # Fall back to provider-agnostic container name
+                self.container_name = os.getenv('CLOUD_STORAGE_CONTAINER')
+                if not self.container_name:
+                    # Fall back to Azure-specific container name
+                    self.container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'emprops-models')
         
         # Get Azure-specific credentials from environment
         self.account_name = os.getenv('AZURE_STORAGE_ACCOUNT')
@@ -455,7 +458,8 @@ class AzureHandler:
                 load_dotenv(env_path)
                 self.account_name = self.account_name or os.getenv('AZURE_STORAGE_ACCOUNT')
                 self.account_key = self.account_key or os.getenv('AZURE_STORAGE_KEY')
-                self.container_name = self.container_name or os.getenv('CLOUD_STORAGE_CONTAINER') or os.getenv('AZURE_STORAGE_CONTAINER', 'test')
+                # Updated: 2025-05-31T14:38:00-04:00 - Check for models container first
+                self.container_name = self.container_name or os.getenv('CLOUD_MODELS_CONTAINER') or os.getenv('CLOUD_STORAGE_CONTAINER') or os.getenv('AZURE_STORAGE_CONTAINER', 'emprops-models')
             
             # If still not found, try .env.local
             if not self.account_name or not self.account_key:
@@ -465,7 +469,8 @@ class AzureHandler:
                     load_dotenv(env_local_path)
                     self.account_name = self.account_name or os.getenv('AZURE_STORAGE_ACCOUNT')
                     self.account_key = self.account_key or os.getenv('AZURE_STORAGE_KEY')
-                    self.container_name = self.container_name or os.getenv('CLOUD_STORAGE_CONTAINER') or os.getenv('AZURE_STORAGE_CONTAINER', 'test')
+                    # Updated: 2025-05-31T14:38:00-04:00 - Check for models container first
+                    self.container_name = self.container_name or os.getenv('CLOUD_MODELS_CONTAINER') or os.getenv('CLOUD_STORAGE_CONTAINER') or os.getenv('AZURE_STORAGE_CONTAINER', 'emprops-models')
         
         # Debug information about available environment variables
         print(f"[EmProps] Azure Handler - Available environment variables:")

@@ -2,7 +2,7 @@ import os
 import torch
 import folder_paths
 import comfy.sd
-from ..utils import log_debug
+from .. import log_debug  # Updated: 2025-06-02T11:10:11-04:00 - Import from main package
 from comfy.cli_args import args
 from server import PromptServer
 

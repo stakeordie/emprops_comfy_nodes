@@ -653,7 +653,7 @@ def extract_metadata(img):
         "info": img.info
     }
     
-    # Add MIME type information
+    # Add MIME type information 
     if img.format:
         print(f"[EmProps] Image format: {img.format}", flush=True)
         # Direct format to MIME type mapping

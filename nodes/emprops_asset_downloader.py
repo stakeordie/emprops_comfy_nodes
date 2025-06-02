@@ -53,7 +53,9 @@ def get_token_from_provider(provider_name: str, custom_token: str = "") -> Optio
         return None
     
     # Get token from environment variable
-    return os.getenv(provider["env_var"])
+    token = os.getenv(provider["env_var"])
+    log_debug(f"Retrieved token from {provider['env_var']}: {'*' * 8 + token[-4:] if token else 'None'}")
+    return token
 
 # Added: 2025-05-12T13:52:12-04:00 - Asset Downloader implementation
 def log_debug(message):
@@ -298,11 +300,26 @@ class EmProps_Asset_Downloader:
                 return (filename, filename)
                 
             except Exception as e:
-                log_debug(f"Error copying file: {str(e)}")
-                if os.path.exists(save_path):
-                    os.remove(save_path)
+                error_msg = f"Error downloading file: {str(e)}"
+                log_debug(error_msg)
+                if 'temp_path' in locals() and temp_path and os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                        log_debug(f"Removed temporary file: {temp_path}")
+                    except Exception as cleanup_error:
+                        log_debug(f"Error removing temporary file: {str(cleanup_error)}")
+                
+                # Log response details if available
+                if 'response' in locals() and hasattr(e, 'response'):
+                    try:
+                        log_debug(f"Response status: {e.response.status_code}")
+                        log_debug(f"Response headers: {dict(e.response.headers)}")
+                        log_debug(f"Response body: {e.response.text[:500]}...")
+                    except Exception as response_error:
+                        log_debug(f"Could not log response details: {str(response_error)}")
+                
                 # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format
-                return (f"Error: {str(e)}", "")
+                return (f"Error: {error_msg}", "")
         
         # Normal download mode - check if file already exists
         if os.path.exists(save_path):
@@ -339,25 +356,27 @@ class EmProps_Asset_Downloader:
             log_debug(f"EmProps_Asset_Downloader: Returning filename: {filename}")
             return (filename, filename)
 
-        log_debug(f'EmProps_Asset_Downloader: Downloading {url} to {os.path.join(save_to, filename)} {" with token" if token else ""}')
+        log_debug(f'EmProps_Asset_Downloader: Downloading {url} to {os.path.join(save_to, filename)}')
         self.node_id = node_id
+        temp_path = save_path + '.tmp'  # Define temp_path early for error handling
 
-        # Prepare headers for the request
-        headers = {}
-        if auth_token:
-            headers["Authorization"] = f"Bearer {auth_token}"
-            # Add headers required by Hugging Face API
-            if "huggingface.co" in url:
-                headers["Accept"] = "application/json"
-                log_debug(f"Added Hugging Face API headers for URL: {url}")
-        
-        log_debug(f"Downloading {url} to {os.path.join(save_to, filename)} with headers: {headers}")
         try:
+            # Prepare headers for the request
+            headers = {}
+            if auth_token:
+                headers["Authorization"] = f"Bearer {auth_token}"
+                # Add headers required by Hugging Face API
+                if "huggingface.co" in url:
+                    headers["Accept"] = "application/json"
+                    log_debug(f"Using Hugging Face API with token: {'*' * 8 + auth_token[-4:] if auth_token else 'No token'}")
+            
+            log_debug(f"Downloading {url} to {os.path.join(save_to, filename)}")
+            log_debug(f"Request headers: {{k: '****' if 'authorization' in k.lower() else v for k, v in headers.items()}}")
+            
             response = requests.get(url, headers=headers, stream=True)
             response.raise_for_status()
 
             total_size = int(response.headers.get('content-length', 0))
-            temp_path = save_path + '.tmp'
             
             # Ensure parent directory exists
             parent_dir = os.path.dirname(temp_path)

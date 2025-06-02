@@ -8,8 +8,52 @@ import traceback
 from tqdm import tqdm
 from server import PromptServer
 import folder_paths  # Updated: 2025-05-12T14:04:35-04:00 - Use folder_paths module instead of direct import
+from typing import Dict, List, Optional, TypedDict
 # Added: 2025-05-13T17:15:00-04:00 - Import model cache database
 from ..db.model_cache import model_cache_db
+
+# Define token provider type
+class TokenProvider(TypedDict):
+    name: str
+    env_var: Optional[str]
+
+# Supported token providers with their display names and environment variable names
+TOKEN_PROVIDERS: List[TokenProvider] = [
+    {"name": "None", "env_var": None},
+    {"name": "Hugging Face", "env_var": "EMPROPS_HF_TOKEN"},
+    {"name": "Custom", "env_var": "CUSTOM"}
+]
+
+def get_token_provider_options() -> List[tuple]:
+    """Get token provider options for the dropdown."""
+    return [(provider["name"], provider["name"]) for provider in TOKEN_PROVIDERS]
+
+def get_token_from_provider(provider_name: str, custom_token: str = "") -> Optional[str]:
+    """
+    Get token based on the selected provider and optional custom token.
+    
+    Args:
+        provider_name: Name of the selected provider
+        custom_token: Token provided in the custom token field (if any)
+        
+    Returns:
+        str or None: The token to use, or None if no token should be used
+    """
+    # If a custom token is provided, use it regardless of the provider
+    if custom_token and custom_token.strip():
+        if custom_token.startswith("$"):
+            # Handle environment variable reference
+            env_value = os.getenv(custom_token[1:])
+            return env_value if env_value is not None else custom_token
+        return custom_token
+    
+    # Find the selected provider
+    provider = next((p for p in TOKEN_PROVIDERS if p["name"] == provider_name), None)
+    if not provider or not provider["env_var"] or provider["env_var"] == "CUSTOM":
+        return None
+    
+    # Get token from environment variable
+    return os.getenv(provider["env_var"])
 
 # Added: 2025-05-12T13:52:12-04:00 - Asset Downloader implementation
 def log_debug(message):
@@ -62,9 +106,19 @@ class EmProps_Asset_Downloader:
                 "url": ("STRING", {"multiline": False, "default": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step.safetensors", "widget": True}),
                 "save_to": (model_folders(), { "default": "checkpoints", "widget": True }),
                 "filename": ("STRING", {"multiline": False, "default": "sdxl_lightning_4step.safetensors", "widget": True}),
+                # Added: 2025-06-02T11:43:17-04:00 - Token provider dropdown
+                "token_provider": (get_token_provider_options(), {"default": "None"}),
             },
             "optional": {
-                "token": ("STRING", { "default": "", "multiline": False, "password": True, "widget": True }),
+                # Updated: 2025-06-02T11:43:17-04:00 - Make token field optional and only show when Custom is selected
+                "token": ("STRING", { 
+                    "default": "", 
+                    "multiline": False, 
+                    "password": True, 
+                    "widget": True,
+                    "dynamicPrompts": False,
+                    "placeholder": "Enter token or $ENV_VAR"
+                }),
                 # Added: 2025-05-12T14:42:00-04:00 - Test mode checkbox for creating a copy instead of downloading
                 "test_with_copy": ("BOOLEAN", {"default": False, "label": "Test with copy"}),
                 # Added: 2025-05-12T14:42:00-04:00 - Source filename for test mode
@@ -74,14 +128,28 @@ class EmProps_Asset_Downloader:
                 "node_id": "UNIQUE_ID"
             }
         }
+        
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        # Force update when token_provider changes to update the UI
+        if "token_provider" in kwargs:
+            return float("inf")
+        return 0
 
-    def download(self, url, save_to, filename, node_id, token="", test_with_copy=False, source_filename=""):
-        log_debug(f"EmProps_Asset_Downloader.download called with url={url}, save_to={save_to}, filename={filename}, node_id={node_id}")
+    def download(self, url, save_to, filename, token_provider, node_id, token="", test_with_copy=False, source_filename=""):
+        log_debug(f"EmProps_Asset_Downloader.download called with url={url}, save_to={save_to}, filename={filename}, token_provider='{token_provider}', node_id={node_id}")
         
         if not url or not save_to or not filename:
             log_debug(f"EmProps_Asset_Downloader: Missing required values: url='{url}', save_to='{save_to}', filename='{filename}'")
             # Updated: 2025-05-13T16:10:33-04:00 - Return consistent tuple format
             return ("", "")
+            
+        # Get token based on provider and custom token
+        auth_token = get_token_from_provider(token_provider, token)
+        if auth_token:
+            log_debug(f"Using token from provider: {token_provider}")
+        else:
+            log_debug("No token will be used for this download")
             
         # Updated: 2025-05-12T14:04:35-04:00 - Use folder_paths to get the correct folder path
         if save_to not in folder_paths.folder_names_and_paths:
@@ -274,12 +342,7 @@ class EmProps_Asset_Downloader:
         log_debug(f'EmProps_Asset_Downloader: Downloading {url} to {os.path.join(save_to, filename)} {" with token" if token else ""}')
         self.node_id = node_id
 
-        # if token starts with `$` replace with environment variable if exists
-        if token.startswith("$"):
-            env_value = os.getenv(token[1:])
-            token = env_value if env_value is not None else token
-
-        headers={"Authorization": f"Bearer {token}"} if token else None
+        headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
 
         log_debug(f"Downloading {url} to {os.path.join(save_to, filename)} {'with Authorization header' if headers else ''}")
         try:

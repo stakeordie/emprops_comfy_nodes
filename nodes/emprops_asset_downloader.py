@@ -342,9 +342,16 @@ class EmProps_Asset_Downloader:
         log_debug(f'EmProps_Asset_Downloader: Downloading {url} to {os.path.join(save_to, filename)} {" with token" if token else ""}')
         self.node_id = node_id
 
-        headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
-
-        log_debug(f"Downloading {url} to {os.path.join(save_to, filename)} {'with Authorization header' if headers else ''}")
+        # Prepare headers for the request
+        headers = {}
+        if auth_token:
+            headers["Authorization"] = f"Bearer {auth_token}"
+            # Add headers required by Hugging Face API
+            if "huggingface.co" in url:
+                headers["Accept"] = "application/json"
+                log_debug(f"Added Hugging Face API headers for URL: {url}")
+        
+        log_debug(f"Downloading {url} to {os.path.join(save_to, filename)} with headers: {headers}")
         try:
             response = requests.get(url, headers=headers, stream=True)
             response.raise_for_status()

@@ -42,7 +42,7 @@ TOKEN_PROVIDERS: List[TokenProvider] = [
     {"name": "Custom", "env_var": "CUSTOM"}
 ]
 
-# Added: 2025-05-12T13:52:12-04:00 - Asset Downloader implementation
+# Added: 2025-05-12T13:52:12-04:00 - Asset Downloader implementation 
 def log_debug(message):
     """Enhanced logging function with timestamp and stack info"""
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")

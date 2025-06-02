@@ -1,16 +1,34 @@
 import os
-# mypy: ignore-errors
-import requests  # type: ignore
-import shutil
-import hashlib
+import sys
+import json
 import time
+import math
+import shutil
+import requests
 import traceback
+from pathlib import Path
 from tqdm import tqdm
+from dotenv import load_dotenv
 from server import PromptServer
 import folder_paths  # Updated: 2025-05-12T14:04:35-04:00 - Use folder_paths module instead of direct import
 from typing import Dict, List, Optional, TypedDict
-# Added: 2025-05-13T17:15:00-04:00 - Import model cache database
 from ..db.model_cache import model_cache_db
+
+# Load environment variables from .env file in the node's root directory
+node_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+dotenv_path = os.path.join(node_root, '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
+    print(f"[EmProps] Loaded environment variables from: {dotenv_path}")
+else:
+    print(f"[EmProps] Warning: No .env file found at {dotenv_path}")
+    # Also try .env.local
+    dotenv_local_path = os.path.join(node_root, '.env.local')
+    if os.path.exists(dotenv_local_path):
+        load_dotenv(dotenv_local_path)
+        print(f"[EmProps] Loaded environment variables from: {dotenv_local_path}")
+    else:
+        print(f"[EmProps] Warning: No .env.local file found at {dotenv_local_path}")
 
 # Define token provider type
 class TokenProvider(TypedDict):
@@ -23,6 +41,15 @@ TOKEN_PROVIDERS: List[TokenProvider] = [
     {"name": "Hugging Face", "env_var": "HF_TOKEN"},
     {"name": "Custom", "env_var": "CUSTOM"}
 ]
+
+# Added: 2025-05-12T13:52:12-04:00 - Asset Downloader implementation
+def log_debug(message):
+    """Enhanced logging function with timestamp and stack info"""
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    caller = traceback.extract_stack()[-2]
+    file = os.path.basename(caller.filename)
+    line = caller.lineno
+    print(f"[EmProps DEBUG {timestamp}] [{file}:{line}] {message}", flush=True)
 
 def get_token_provider_options() -> List[str]:
     """Get token provider options for the dropdown."""
@@ -39,32 +66,44 @@ def get_token_from_provider(provider_name: str, custom_token: str = "") -> Optio
     Returns:
         str or None: The token to use, or None if no token should be used
     """
+    # Log all environment variables for debugging (filtered for security)
+    log_debug("=== Environment Variables ===")
+    for k, v in os.environ.items():
+        if 'TOKEN' in k or 'KEY' in k or 'SECRET' in k:
+            log_debug(f"{k} = {'*' * 8 + v[-4:] if v else 'None'}")
+    log_debug("============================")
+
     # If a custom token is provided, use it regardless of the provider
     if custom_token and custom_token.strip():
+        log_debug(f"Using custom token: {'*' * 8 + custom_token[-4:] if custom_token else 'None'}")
         if custom_token.startswith("$"):
             # Handle environment variable reference
-            env_value = os.getenv(custom_token[1:])
+            var_name = custom_token[1:]
+            env_value = os.getenv(var_name)
+            log_debug(f"Looking up environment variable: {var_name} = {'*' * 8 + env_value[-4:] if env_value else 'None'}")
             return env_value if env_value is not None else custom_token
         return custom_token
     
     # Find the selected provider
     provider = next((p for p in TOKEN_PROVIDERS if p["name"] == provider_name), None)
     if not provider or not provider["env_var"] or provider["env_var"] == "CUSTOM":
+        log_debug(f"No valid provider found for: {provider_name}")
         return None
     
     # Get token from environment variable
-    token = os.getenv(provider["env_var"])
-    log_debug(f"Retrieved token from {provider['env_var']}: {'*' * 8 + token[-4:] if token else 'None'}")
+    env_var_name = provider["env_var"]
+    token = os.getenv(env_var_name)
+    log_debug(f"Retrieving token from environment variable: {env_var_name}")
+    log_debug(f"Token value: {'*' * 8 + token[-4:] if token else 'None'}")
+    log_debug(f"Environment has HF_TOKEN: {'HF_TOKEN' in os.environ}")
+    log_debug(f"Environment has {env_var_name}: {env_var_name in os.environ}")
+    
+    # If token is None, try getting it from the environment directly
+    if token is None and env_var_name in os.environ:
+        token = os.environ[env_var_name]
+        log_debug(f"Retrieved token directly from os.environ: {'*' * 8 + token[-4:] if token else 'None'}")
+    
     return token
-
-# Added: 2025-05-12T13:52:12-04:00 - Asset Downloader implementation
-def log_debug(message):
-    """Enhanced logging function with timestamp and stack info"""
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    caller = traceback.extract_stack()[-2]
-    file = os.path.basename(caller.filename)
-    line = caller.lineno
-    print(f"[EmProps DEBUG {timestamp}] [{file}:{line}] {message}", flush=True)
 
 def model_folders():
     # Updated: 2025-05-12T14:04:35-04:00 - Get folder names from folder_paths

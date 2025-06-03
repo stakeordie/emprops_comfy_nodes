@@ -44,10 +44,40 @@ class EmProps_GGUF_Unet_Loader:
     CATEGORY = "EmProps/Loaders"
     TITLE = "Unet Loader (GGUF)"
 
-    def load_unet(self, unet_path, node_id=None):
-        if not unet_path or not os.path.exists(unet_path):
+    def load_unet(self, unet_name, device="cuda"):
+        """
+        Load a GGUF UNet model
+        
+        Args:
+            unet_name (str): Name or full path of the GGUF model file
+            device (str): Device to load the model on (default: 'cuda')
+            
+        Returns:
+            tuple: (model_patcher, clip, vae)
+        """
+        # Check if unet_name is already a full path
+        if os.path.isfile(unet_name):
+            unet_path = unet_name
+        else:
+            # Try to get the full path using folder_paths
+            unet_path = folder_paths.get_full_path("unet_gguf", unet_name)
+            if unet_path is None:
+                # Check in the default models directory
+                models_dir = os.path.join(folder_paths.models_dir, "unet")
+                potential_path = os.path.join(models_dir, unet_name)
+                if os.path.isfile(potential_path):
+                    unet_path = potential_path
+                else:
+                    raise ValueError(f"GGUF model file not found: {unet_name}\n"
+                                 f"Searched in:\n"
+                                 f"- folder_paths.get_full_path('unet_gguf')\n"
+                                 f"- {models_dir}")
+        
+        if not os.path.isfile(unet_path):
             raise ValueError(f"GGUF model file not found: {unet_path}")
-
+            
+        print(f"[EmProps] Loading GGUF model from: {unet_path}")
+        
         # Initialize GGML operations
         ops = GGMLOps()
         

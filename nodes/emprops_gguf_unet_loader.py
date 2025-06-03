@@ -35,12 +35,12 @@ class EmProps_GGUF_Unet_Loader:
         return {
             "required": {
                 "unet_name": (folder_paths.get_filename_list("unet_gguf"), ),
-                "dequant_dtype": (["default", "target", "float32", "float16", "bfloat16"], {"default": "default"}),
-                "patch_dtype": (["default", "target", "float32", "float16", "bfloat16"], {"default": "default"}),
-                "patch_on_device": (["false", "true"], {"default": "false"}),
             },
             "hidden": {
-                "node_id": "UNIQUE_ID"
+                "node_id": "UNIQUE_ID",
+                "dequant_dtype": "default",
+                "patch_dtype": "default",
+                "patch_on_device": "false"
             }
         }
 
@@ -50,7 +50,11 @@ class EmProps_GGUF_Unet_Loader:
     CATEGORY = "EmProps/Loaders"
     TITLE = "Unet Loader (GGUF)"
 
-    def load_unet(self, unet_name, dequant_dtype="default", patch_dtype="default", patch_on_device="false", node_id=None):
+    def load_unet(self, unet_name, dequant_dtype=None, patch_dtype=None, patch_on_device=None, node_id=None):
+        # Apply defaults if not provided (for backward compatibility)
+        dequant_dtype = dequant_dtype or "default"
+        patch_dtype = patch_dtype or "default"
+        patch_on_device = patch_on_device or "false"
         """
         Load a GGUF UNet model
         

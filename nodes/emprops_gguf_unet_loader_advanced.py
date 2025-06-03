@@ -1,16 +1,27 @@
 # [2025-06-02T16:30:00-04:00] Added Advanced GGUF Unet Loader for EmProps
 import os
+import sys
 import torch
 import logging
 from server import PromptServer
 import folder_paths
 import comfy.sd
 
-# Import GGUF components
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'ComfyUI/custom_nodes/ComfyUI-GGUF'))
-from nodes import GGUFModelPatcher
-from loader import gguf_sd_loader
-from ops import GGMLOps
+# Add GGUF nodes to path
+gguf_nodes_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'ComfyUI-GGUF')
+if gguf_nodes_path not in sys.path:
+    sys.path.append(gguf_nodes_path)
+
+try:
+    from nodes import GGUFModelPatcher
+    from loader import gguf_sd_loader
+    from ops import GGMLOps
+except ImportError as e:
+    print(f"[EmProps GGUF ERROR] Failed to import GGUF components: {str(e)}")
+    print(f"[EmProps GGUF ERROR] Tried to import from: {gguf_nodes_path}")
+    GGUFModelPatcher = None
+    gguf_sd_loader = None
+    GGMLOps = None
 
 class EmProps_GGUF_Unet_Loader_Advanced:
     """

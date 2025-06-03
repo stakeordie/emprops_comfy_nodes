@@ -8,9 +8,10 @@ import folder_paths
 import comfy.sd
 
 try:
-    from ComfyUI_GGUF.nodes import GGUFModelPatcher
-    from ComfyUI_GGUF.loader import gguf_sd_loader
-    from ComfyUI_GGUF.ops import GGMLOps
+    # Import from the root of the ComfyUI-GGUF package
+    from nodes import GGUFModelPatcher
+    from loader import gguf_sd_loader
+    from ops import GGMLOps
 except ImportError as e:
     logger.error(f"[EmProps GGUF ERROR] Failed to import GGUF components: {str(e)}")
     logger.error("[EmProps GGUF ERROR] Make sure ComfyUI-GGUF is installed in your custom_nodes directory")

@@ -39,8 +39,6 @@ from .nodes.emprops_diffusion_model_loader import EmProps_Diffusion_Model_Loader
 from .nodes.emprops_clip_loader import EmProps_CLIP_Loader  # Added: 2025-05-30T10:25:09-04:00
 from .nodes.emprops_style_model_loader import EmProps_Style_Model_Loader  # Added: 2025-06-02T10:32:10-04:00
 from .nodes.emprops_clip_vision_loader import EmProps_CLIP_Vision_Loader  # Added: 2025-06-02T10:32:10-04:00
-from .nodes.emprops_gguf_unet_loader import EmProps_GGUF_Unet_Loader  # Added: 2025-06-02T16:30:00-04:00
-from .nodes.emprops_gguf_unet_loader_advanced import EmProps_GGUF_Unet_Loader_Advanced  # Added: 2025-06-02T16:30:00-04:00
 
 log_debug("Starting EmProps initialization")
 log_debug(f"Python path: {sys.path}")
@@ -110,8 +108,6 @@ try:
     "EmProps_CLIP_Loader": EmProps_CLIP_Loader,  # Added: 2025-05-30T10:38:56-04:00
     "EmProps_Style_Model_Loader": EmProps_Style_Model_Loader,  # Added: 2025-06-02T10:32:10-04:00
     "EmProps_CLIP_Vision_Loader": EmProps_CLIP_Vision_Loader,  # Added: 2025-06-02T10:32:10-04:00
-    "EmProps_GGUF_Unet_Loader": EmProps_GGUF_Unet_Loader,  # Added: 2025-06-02T16:30:00-04:00
-    "EmProps_GGUF_Unet_Loader_Advanced": EmProps_GGUF_Unet_Loader_Advanced  # Added: 2025-06-02T16:30:00-04:00
 }
     log_debug(f"NODE_CLASS_MAPPINGS created successfully with {len(NODE_CLASS_MAPPINGS)} entries")
     for node_name, node_class in NODE_CLASS_MAPPINGS.items():
@@ -139,8 +135,6 @@ try:
     "EmProps_CLIP_Loader": "EmProps Load CLIP",  # Added: 2025-05-30T10:38:56-04:00
     "EmProps_Style_Model_Loader": "EmProps Load Style Model",  # Added: 2025-06-02T10:32:10-04:00
     "EmProps_CLIP_Vision_Loader": "EmProps Load CLIP Vision",  # Added: 2025-06-02T10:32:10-04:00
-    "EmProps_GGUF_Unet_Loader": "EmProps Unet Loader (GGUF)",  # Added: 2025-06-02T16:30:00-04:00
-    "EmProps_GGUF_Unet_Loader_Advanced": "EmProps Unet Loader (GGUF/Advanced)"  # Added: 2025-06-02T16:30:00-04:00
 }
     log_debug(f"NODE_DISPLAY_NAME_MAPPINGS created successfully with {len(NODE_DISPLAY_NAME_MAPPINGS)} entries")
 except Exception as e:

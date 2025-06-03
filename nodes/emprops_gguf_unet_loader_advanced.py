@@ -1,9 +1,9 @@
 # [2025-06-02T16:30:00-04:00] Added Advanced GGUF Unet Loader for EmProps
+# [2025-06-02T18:28:00-04:00] Updated to better match original implementation
 import os
 import sys
 import torch
 import logging
-from server import PromptServer
 import folder_paths
 import comfy.sd
 
@@ -23,6 +23,9 @@ except ImportError as e:
     gguf_sd_loader = None
     GGMLOps = None
 
+# Initialize logging
+logger = logging.getLogger(__name__)
+
 class EmProps_GGUF_Unet_Loader_Advanced:
     """
     EmProps Advanced GGUF Unet Loader - Loads a UNet model from a GGUF file with advanced options.
@@ -31,7 +34,7 @@ class EmProps_GGUF_Unet_Loader_Advanced:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "unet_path": ("STRING", {"multiline": False, "default": ""}),
+                "unet_name": (folder_paths.get_filename_list("unet_gguf"), ),
                 "dequant_dtype": (["default", "target", "float32", "float16", "bfloat16"], {"default": "default"}),
                 "patch_dtype": (["default", "target", "float32", "float16", "bfloat16"], {"default": "default"}),
                 "patch_on_device": (["false", "true"], {"default": "false"}),
@@ -47,31 +50,54 @@ class EmProps_GGUF_Unet_Loader_Advanced:
     CATEGORY = "EmProps/Loaders"
     TITLE = "Unet Loader (GGUF/Advanced)"
 
-    def load_unet(self, unet_path, dequant_dtype="default", patch_dtype="default", patch_on_device="false", node_id=None):
-        if not unet_path or not os.path.exists(unet_path):
-            raise ValueError(f"GGUF model file not found: {unet_path}")
-
+    def load_unet(self, unet_name, dequant_dtype="default", patch_dtype="default", patch_on_device="false", node_id=None):
+        """
+        Load a GGUF UNet model with advanced options
+        
+        Args:
+            unet_name (str): Name of the GGUF model file
+            dequant_dtype (str): Dtype for dequantization (default: "default")
+            patch_dtype (str): Dtype for patching (default: "default")
+            patch_on_device (str): Whether to patch on device (default: "false")
+            node_id (str): Optional node ID for logging
+            
+        Returns:
+            tuple: (model,)
+        """
+        logger.info(f"[EmProps] Loading GGUF model (Advanced): {unet_name}")
+        
         # Convert string boolean to actual boolean
         patch_on_device = patch_on_device.lower() == "true"
-
+        
         # Initialize GGML operations
         ops = GGMLOps()
         
         # Configure dequantization dtype
         if dequant_dtype not in ("default", None):
             if dequant_dtype == "target":
+                logger.debug(f"[EmProps] Setting dequant_dtype to target")
                 ops.Linear.dequant_dtype = dequant_dtype
             else:
+                logger.debug(f"[EmProps] Setting dequant_dtype to {dequant_dtype}")
                 ops.Linear.dequant_dtype = getattr(torch, dequant_dtype)
         
         # Configure patch dtype
         if patch_dtype not in ("default", None):
             if patch_dtype == "target":
+                logger.debug("[EmProps] Setting patch_dtype to target")
                 ops.Linear.patch_dtype = patch_dtype
             else:
+                logger.debug(f"[EmProps] Setting patch_dtype to {patch_dtype}")
                 ops.Linear.patch_dtype = getattr(torch, patch_dtype)
         
         try:
+            # Get the full path to the model file
+            unet_path = folder_paths.get_full_path("unet_gguf", unet_name)
+            if not unet_path or not os.path.isfile(unet_path):
+                raise FileNotFoundError(f"GGUF model file not found: {unet_name}")
+            
+            logger.info(f"[EmProps] Loading GGUF model from: {unet_path}")
+            
             # Load the model state dict from GGUF file
             sd = gguf_sd_loader(unet_path)
             
@@ -88,10 +114,12 @@ class EmProps_GGUF_Unet_Loader_Advanced:
             model = GGUFModelPatcher.clone(model)
             model.patch_on_device = patch_on_device
             
+            logger.info(f"[EmProps] Successfully loaded GGUF model (Advanced): {unet_name}")
             return (model,)
             
         except Exception as e:
-            raise RuntimeError(f"Error loading GGUF model {unet_path}: {str(e)}")
+            logger.error(f"[EmProps] Error loading GGUF model {unet_name}: {str(e)}")
+            raise
 
 # Node class mappings for ComfyUI
 NODE_CLASS_MAPPINGS = {

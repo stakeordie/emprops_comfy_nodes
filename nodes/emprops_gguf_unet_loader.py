@@ -7,18 +7,13 @@ import logging
 import folder_paths
 import comfy.sd
 
-# Add GGUF nodes to path
-gguf_nodes_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'ComfyUI-GGUF')
-if gguf_nodes_path not in sys.path:
-    sys.path.append(gguf_nodes_path)
-
 try:
-    from nodes import GGUFModelPatcher
-    from loader import gguf_sd_loader
-    from ops import GGMLOps
+    from ComfyUI_GGUF.nodes import GGUFModelPatcher
+    from ComfyUI_GGUF.loader import gguf_sd_loader
+    from ComfyUI_GGUF.ops import GGMLOps
 except ImportError as e:
-    print(f"[EmProps GGUF ERROR] Failed to import GGUF components: {str(e)}")
-    print(f"[EmProps GGUF ERROR] Tried to import from: {gguf_nodes_path}")
+    logger.error(f"[EmProps GGUF ERROR] Failed to import GGUF components: {str(e)}")
+    logger.error("[EmProps GGUF ERROR] Make sure ComfyUI-GGUF is installed in your custom_nodes directory")
     GGUFModelPatcher = None
     gguf_sd_loader = None
     GGMLOps = None

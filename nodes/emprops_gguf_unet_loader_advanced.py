@@ -7,20 +7,20 @@ import logging
 import folder_paths
 import comfy.sd
 
+# Initialize logging first
+logger = logging.getLogger(__name__)
+
 try:
-    # Import from the root of the ComfyUI-GGUF package
-    from nodes import GGUFModelPatcher
-    from loader import gguf_sd_loader
-    from ops import GGMLOps
+    # Import from ComfyUI-GGUF package
+    from ComfyUI_GGUF.nodes import GGUFModelPatcher
+    from ComfyUI_GGUF.loader import gguf_sd_loader
+    from ComfyUI_GGUF.ops import GGMLOps
 except ImportError as e:
     logger.error(f"[EmProps GGUF ADVANCED ERROR] Failed to import GGUF components: {str(e)}")
     logger.error("[EmProps GGUF ADVANCED ERROR] Make sure ComfyUI-GGUF is installed in your custom_nodes directory")
     GGUFModelPatcher = None
     gguf_sd_loader = None
     GGMLOps = None
-
-# Initialize logging
-logger = logging.getLogger(__name__)
 
 class EmProps_GGUF_Unet_Loader_Advanced:
     """

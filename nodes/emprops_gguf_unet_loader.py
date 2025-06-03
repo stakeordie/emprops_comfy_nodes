@@ -34,7 +34,7 @@ class EmProps_GGUF_Unet_Loader:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "unet_name": (folder_paths.get_filename_list("unet_gguf"), ),
+                "unet_name": ("STRING", {"default": ""}),  # Accept string input for asset downloader compatibility
             },
             "hidden": {
                 "node_id": "UNIQUE_ID",
@@ -91,10 +91,25 @@ class EmProps_GGUF_Unet_Loader:
                 ops.Linear.patch_dtype = getattr(torch, patch_dtype)
         
         try:
-            # Get the full path to the model file
+            # First try to get the full path directly (for absolute paths or files in search paths)
             unet_path = folder_paths.get_full_path("unet_gguf", unet_name)
+            
+            # If not found, try to find the file in the unet_gguf directory
             if not unet_path or not os.path.isfile(unet_path):
-                raise FileNotFoundError(f"GGUF model file not found: {unet_name}")
+                # Check if the file exists directly
+                if os.path.isfile(unet_name):
+                    unet_path = unet_name
+                else:
+                    # Try to find the file in the unet_gguf directory
+                    unet_dir = folder_paths.get_folder_paths("unet_gguf")[0]
+                    possible_path = os.path.join(unet_dir, unet_name)
+                    if os.path.isfile(possible_path):
+                        unet_path = possible_path
+                    else:
+                        raise FileNotFoundError(
+                            f"GGUF model file not found: {unet_name}\n"
+                            f"Searched in: {unet_dir}"
+                        )
             
             logger.info(f"[EmProps] Loading GGUF model from: {unet_path}")
             

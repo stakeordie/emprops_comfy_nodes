@@ -39,6 +39,7 @@ class TokenProvider(TypedDict):
 TOKEN_PROVIDERS: List[TokenProvider] = [
     {"name": "None", "env_var": None},
     {"name": "Hugging Face", "env_var": "HF_TOKEN"},
+    {"name": "CivitAI", "env_var": "CIVITAI_TOKEN"},
     {"name": "Custom", "env_var": "CUSTOM"}
 ]
 
@@ -148,7 +149,7 @@ class EmProps_Asset_Downloader:
                 "save_to": (model_folders(), { "default": "checkpoints", "widget": True }),
                 "filename": ("STRING", {"multiline": False, "default": "sdxl_lightning_4step.safetensors", "widget": True}),
                 # Added: 2025-06-02T11:43:17-04:00 - Token provider dropdown
-                "token_provider": (get_token_provider_options(), {"default": get_token_provider_options()[0][0]}),
+                "token_provider": (get_token_provider_options(), {"default": get_token_provider_options()[0]["name"]}),
             },
             "optional": {
                 # Updated: 2025-06-02T11:43:17-04:00 - Make token field optional and only show when Custom is selected

@@ -32,7 +32,7 @@ from .nodes.emprops_text_cloud_storage_saver import EmpropsTextCloudStorageSaver
 from .nodes.emprops_asset_downloader import EmProps_Asset_Downloader  # Added: 2025-05-12T13:52:12-04:00
 from .nodes.emprops_checkpoint_loader import EmProps_Checkpoint_Loader  # Added: 2025-05-13T09:42:00-04:00
 from .nodes.emprops_vae_loader import EmProps_VAE_Loader  # Added: 2025-05-13T16:56:15-04:00
-from .nodes.emprops_upscaler_loader import EmProps_Upscaler_Loader  # Added: 2025-05-13T16:58:00-04:00
+from .nodes.emprops_upscaler_loader import EmProps_Load_Upscale_Model, EmProps_ImageUpscaleWithModel  # Updated: 2025-06-04T18:58:00-04:00 - Renamed for consistency
 from .nodes.emprops_controlnet_loader import EmProps_ControlNet_Loader  # Added: 2025-05-13T16:59:30-04:00
 from .nodes.emprops_dualclip_loader import EmProps_DualCLIP_Loader  # Added: 2025-05-30T10:25:09-04:00
 from .nodes.emprops_diffusion_model_loader import EmProps_Diffusion_Model_Loader  # Added: 2025-05-30T10:25:09-04:00
@@ -101,7 +101,8 @@ try:
     "EmProps_Asset_Downloader": EmProps_Asset_Downloader,  # Added: 2025-05-12T13:52:12-04:00
     "EmProps_Checkpoint_Loader": EmProps_Checkpoint_Loader,  # Added: 2025-05-13T09:42:00-04:00
     "EmProps_VAE_Loader": EmProps_VAE_Loader,  # Added: 2025-05-13T16:56:15-04:00
-    "EmProps_Upscaler_Loader": EmProps_Upscaler_Loader,  # Added: 2025-05-13T16:58:00-04:00
+    "EmProps_Load_Upscale_Model": EmProps_Load_Upscale_Model,  # Updated: 2025-06-04T18:58:00-04:00 - Renamed for consistency
+    "EmProps_ImageUpscaleWithModel": EmProps_ImageUpscaleWithModel,  # Added: 2025-06-04T18:58:00-04:00
     "EmProps_ControlNet_Loader": EmProps_ControlNet_Loader,  # Added: 2025-05-13T16:59:30-04:00
     "EmProps_DualCLIP_Loader": EmProps_DualCLIP_Loader,  # Added: 2025-05-30T10:28:48-04:00
     "EmProps_Diffusion_Model_Loader": EmProps_Diffusion_Model_Loader,  # Added: 2025-05-30T10:28:48-04:00
@@ -128,7 +129,8 @@ try:
     "EmProps_Asset_Downloader": "EmProps Asset Downloader",  # Added: 2025-05-12T13:52:12-04:00
     "EmProps_Checkpoint_Loader": "EmProps Checkpoint Loader",  # Added: 2025-05-13T09:42:00-04:00
     "EmProps_VAE_Loader": "EmProps VAE Loader",  # Added: 2025-05-13T16:56:15-04:00
-    "EmProps_Upscaler_Loader": "EmProps Upscaler Loader",  # Added: 2025-05-13T16:58:00-04:00
+    "EmProps_Load_Upscale_Model": "EmProps Load Upscale Model",  # Updated: 2025-06-04T18:58:00-04:00 - Renamed for consistency
+    "EmProps_ImageUpscaleWithModel": "EmProps Image Upscale With Model",  # Added: 2025-06-04T18:58:00-04:00
     "EmProps_ControlNet_Loader": "EmProps ControlNet Loader",  # Added: 2025-05-13T16:59:30-04:00
     "EmProps_DualCLIP_Loader": "EmProps DualCLIP Loader",  # Added: 2025-05-30T10:25:09-04:00
     "EmProps_Diffusion_Model_Loader": "EmProps Load Diffusion Model",  # Updated: 2025-05-30T10:38:56-04:00

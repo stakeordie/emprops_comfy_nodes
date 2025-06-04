@@ -54,6 +54,7 @@ def log_debug(message):
 
 def get_token_provider_options() -> List[str]:
     """Get token provider options for the dropdown."""
+    # Flag: 2025-06-04 17:19 - Fixed token provider options to return list of strings
     return [provider["name"] for provider in TOKEN_PROVIDERS]
 
 def get_token_from_provider(provider_name: str, custom_token: str = "") -> Optional[str]:
@@ -149,7 +150,8 @@ class EmProps_Asset_Downloader:
                 "save_to": (model_folders(), { "default": "checkpoints", "widget": True }),
                 "filename": ("STRING", {"multiline": False, "default": "sdxl_lightning_4step.safetensors", "widget": True}),
                 # Added: 2025-06-02T11:43:17-04:00 - Token provider dropdown
-                "token_provider": (get_token_provider_options(), {"default": get_token_provider_options()[0]["name"]}),
+                # Updated: 2025-06-04 17:20 - Fixed default value to use first item in the list
+                "token_provider": (get_token_provider_options(), {"default": "None"}),
             },
             "optional": {
                 # Updated: 2025-06-02T11:43:17-04:00 - Make token field optional and only show when Custom is selected

@@ -24,7 +24,7 @@ def log_debug(message):
     # line = caller.lineno
     # print(f"[EmProps DEBUG {timestamp}] [{file}:{line}] {message}", flush=True)
 # Added: 2025-04-20T21:57:24-04:00 - Removed model downloader nodes
-from .nodes.emprops_lora_loader import EmProps_Lora_Loader
+from .nodes.emprops_lora_loader_simple import EmProps_Lora_Loader_Simple
 from .nodes.emprops_cloud_storage_saver import EmpropsCloudStorageSaver
 from .nodes.emprops_image_loader import EmpropsImageLoader
 from .nodes.emprops_text_s3_saver import EmProps_Text_S3_Saver
@@ -92,7 +92,7 @@ log_debug("Creating NODE_CLASS_MAPPINGS dictionary")
 try:
     NODE_CLASS_MAPPINGS = {
     # Added: 2025-04-20T21:57:24-04:00 - Removed model downloader nodes
-    "EmProps_Lora_Loader": EmProps_Lora_Loader,
+    "EmProps_Lora_Loader": EmProps_Lora_Loader_Simple, # Updated: 2025-06-08 - Replaced with simplified version
     "EmProps_Cloud_Storage_Saver": EmpropsCloudStorageSaver,
     "EmProps_S3_Saver": EmpropsCloudStorageSaver,  # Backward compatibility
     "EmProps_Image_Loader": EmpropsImageLoader,

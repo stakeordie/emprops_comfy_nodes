@@ -205,11 +205,8 @@ class EmpropsCloudStorageSaver:
         log_debug(f"Images type: {type(images)}, shape: {images.shape if hasattr(images, 'shape') else 'unknown'}")
         log_debug(f"Prompt: {'Present' if prompt else 'None'}, extra_pnginfo: {'Present' if extra_pnginfo else 'None'}")
         
-        print("[EmProps] ABOUT TO START LOCAL SAVE SECTION", flush=True)
-        
         # First save locally for preview (like standard SaveImage node)
         try:
-            print("[EmProps] INSIDE LOCAL SAVE TRY BLOCK", flush=True)
             import folder_paths
             log_debug(f"Starting local save for preview - filename: {filename}")
             

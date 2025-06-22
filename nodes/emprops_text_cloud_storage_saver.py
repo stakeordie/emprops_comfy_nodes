@@ -51,77 +51,8 @@ class EmpropsTextCloudStorageSaver:
                 pass  # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00]
                 # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Azure Blob Storage support is available")  # Non-critical: provider check
             else:
-                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Azure Blob Storage support is not available. Install with 'pip install azure-storage-blob'")  # Non-critical: provider check
+                pass  # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Azure Blob Storage support is not available. Install with 'pip install azure-storage-blob'")  # Non-critical: provider check
         
-                # First try system environment for AWS credentials
-                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Loading AWS credentials from environment")  # Non-critical: routine credential load
-                self.aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
-                self.aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
-                self.aws_region = os.getenv('AWS_DEFAULT_REGION')
-                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"AWS credentials from env: Access Key: {'Found' if self.aws_access_key else 'Not found'}, Secret Key: {'Found' if self.aws_secret_key else 'Not found'}, Region: {self.aws_region or 'Not found'}")  # Non-critical: credential detail
-
-            # If not found, try .env and .env.local files
-            if not self.aws_access_key or not self.aws_secret_key:
-                current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Go up one level to project root
-                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Looking for .env files in: {current_dir}")  # Non-critical: routine .env search
-                
-                # Try .env first
-                env_path = os.path.join(current_dir, '.env')
-                if os.path.exists(env_path):
-                    # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Loading .env from: {env_path}")  # Non-critical: routine .env load
-                    load_dotenv(env_path)
-                    self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
-                    if not self.aws_secret_key:
-                        self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
-                        # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("AWS_SECRET_ACCESS_KEY_ENCODED not found in .env, trying AWS_SECRET_ACCESS_KEY")  # Non-critical: routine .env fallback
-                    self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
-                    self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
-                
-                # If still not found, try .env.local
-                if not self.aws_access_key or not self.aws_secret_key:
-                    env_local_path = os.path.join(current_dir, '.env.local')
-                    if os.path.exists(env_local_path):
-                        # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Loading .env.local from: {env_local_path}")  # Non-critical: routine .env.local load
-                        load_dotenv(env_local_path)
-                        self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
-                        if not self.aws_secret_key:
-                            self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
-                            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("AWS_SECRET_ACCESS_KEY_ENCODED not found in .env.local, trying AWS_SECRET_ACCESS_KEY")  # Non-critical: routine .env fallback
-                        self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
-                        self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
-        
-            # Set default region if still not set
-            self.aws_region = self.aws_region or 'us-east-1'
-            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Final AWS region: {self.aws_region}")  # Non-critical: routine
-
-            if not self.aws_secret_key or not self.aws_access_key:
-                log_debug("Warning: AWS credentials not found in environment or .env.local")
-            
-            # Check for Google Cloud credentials
-            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Checking Google Cloud credentials")  # Non-critical: routine
-            self.gcs_credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"GCS credentials path: {self.gcs_credentials_path or 'Not found'}")  # Non-critical: routine
-            if not self.gcs_credentials_path and self.gcs_available:
-                log_debug("Warning: GOOGLE_APPLICATION_CREDENTIALS not found in environment")
-            
-            # Check for Azure credentials
-            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Checking Azure credentials")  # Non-critical: routine
-            # Support for provider-agnostic environment variables
-            # Added: 2025-05-07T14:30:00-04:00 - Provider-agnostic environment variables
-            self.azure_account_name = os.getenv('STORAGE_ACCOUNT_NAME', os.getenv('AZURE_STORAGE_ACCOUNT'))
-            self.azure_account_key = os.getenv('STORAGE_ACCOUNT_KEY', os.getenv('AZURE_STORAGE_KEY'))
-            self.azure_container = os.getenv('STORAGE_CONTAINER', os.getenv('AZURE_STORAGE_CONTAINER', 'test'))
-            
-            # Check for test mode using provider-agnostic variable
-            storage_test_mode = os.getenv('STORAGE_TEST_MODE', os.getenv('AZURE_TEST_MODE', 'false')).lower() == 'true'
-            if storage_test_mode:
-                self.azure_container = f"{self.azure_container}-test"
-                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Using test container for Azure: {self.azure_container}")  # Non-critical: test mode
-                
-            # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Azure credentials: Account: {'Found' if self.azure_account_name else 'Not found'}, Key: {'Found' if self.azure_account_key else 'Not found'}, Container: {self.azure_container}")  # Non-critical: credential detail
-            if (not self.azure_account_name or not self.azure_account_key) and self.azure_available:
-                log_debug("Warning: Azure credentials not found in environment. Set STORAGE_ACCOUNT_NAME/STORAGE_ACCOUNT_KEY or AZURE_STORAGE_ACCOUNT/AZURE_STORAGE_KEY")
-                
             # Check for CLOUD_PROVIDER environment variable
             # Added: 2025-05-07T14:40:00-04:00 - Support for CLOUD_PROVIDER environment variable
             self.default_provider = os.getenv('CLOUD_PROVIDER', 'aws').lower()
@@ -179,6 +110,74 @@ class EmpropsTextCloudStorageSaver:
     CATEGORY = "EmProps"
     OUTPUT_NODE = True
     DESCRIPTION = "Saves text content to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with configurable bucket and prefix."
+
+    def _init_aws_credentials(self):
+        """Lazy initialization of AWS credentials"""
+        if hasattr(self, 'aws_access_key'):
+            return  # Already initialized
+            
+        # First try system environment for AWS credentials
+        self.aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+        self.aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        self.aws_region = os.getenv('AWS_DEFAULT_REGION')
+
+        # If not found, try .env and .env.local files
+        if not self.aws_access_key or not self.aws_secret_key:
+            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            
+            # Try .env first
+            env_path = os.path.join(current_dir, '.env')
+            if os.path.exists(env_path):
+                load_dotenv(env_path)
+                self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
+                if not self.aws_secret_key:
+                    self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
+                self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
+                self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
+            
+            # If still not found, try .env.local
+            if not self.aws_access_key or not self.aws_secret_key:
+                env_local_path = os.path.join(current_dir, '.env.local')
+                if os.path.exists(env_local_path):
+                    load_dotenv(env_local_path)
+                    self.aws_secret_key = self.aws_secret_key or unescape_env_value(os.getenv('AWS_SECRET_ACCESS_KEY_ENCODED', ''))
+                    if not self.aws_secret_key:
+                        self.aws_secret_key = self.aws_secret_key or os.getenv('AWS_SECRET_ACCESS_KEY', '')
+                    self.aws_access_key = self.aws_access_key or os.getenv('AWS_ACCESS_KEY_ID', '')
+                    self.aws_region = self.aws_region or os.getenv('AWS_DEFAULT_REGION', '')
+        
+        # Set default region if still not set
+        self.aws_region = self.aws_region or 'us-east-1'
+
+        if not self.aws_secret_key or not self.aws_access_key:
+            log_debug("Warning: AWS credentials not found in environment or .env.local")
+
+    def _init_gcs_credentials(self):
+        """Lazy initialization of GCS credentials"""
+        if hasattr(self, 'gcs_credentials_path'):
+            return  # Already initialized
+            
+        self.gcs_credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+        if not self.gcs_credentials_path and self.gcs_available:
+            log_debug("Warning: GOOGLE_APPLICATION_CREDENTIALS not found in environment")
+
+    def _init_azure_credentials(self):
+        """Lazy initialization of Azure credentials"""
+        if hasattr(self, 'azure_account_name'):
+            return  # Already initialized
+            
+        # Support for provider-agnostic environment variables
+        self.azure_account_name = os.getenv('STORAGE_ACCOUNT_NAME', os.getenv('AZURE_STORAGE_ACCOUNT'))
+        self.azure_account_key = os.getenv('STORAGE_ACCOUNT_KEY', os.getenv('AZURE_STORAGE_KEY'))
+        self.azure_container = os.getenv('STORAGE_CONTAINER', os.getenv('AZURE_STORAGE_CONTAINER', 'test'))
+        
+        # Check for test mode using provider-agnostic variable
+        storage_test_mode = os.getenv('STORAGE_TEST_MODE', os.getenv('AZURE_TEST_MODE', 'false')).lower() == 'true'
+        if storage_test_mode:
+            self.azure_container = f"{self.azure_container}-test"
+            
+        if (not self.azure_account_name or not self.azure_account_key) and self.azure_available:
+            log_debug("Warning: Azure credentials not found in environment. Set STORAGE_ACCOUNT_NAME/STORAGE_ACCOUNT_KEY or AZURE_STORAGE_ACCOUNT/AZURE_STORAGE_KEY")
 
     def verify_s3_upload(self, s3_client, bucket: str, key: str, max_attempts: int = 5, delay: int = 1) -> bool:
         """Verify that a file exists in S3 by checking with head_object"""
@@ -252,6 +251,9 @@ class EmpropsTextCloudStorageSaver:
         try:
             # Initialize the appropriate cloud storage client based on provider
             if provider == "aws":
+                # Initialize AWS credentials only when needed
+                self._init_aws_credentials()
+                
                 # Debug: Print AWS credentials being used (first 4 chars only)
                 if self.aws_access_key:
                     print(f"[EmProps] Debug - Using AWS Access Key ID: {self.aws_access_key[:4]}...")
@@ -272,6 +274,9 @@ class EmpropsTextCloudStorageSaver:
             elif provider == "google":
                 if not self.gcs_available:
                     raise ValueError("Google Cloud Storage is not available. Install with 'pip install google-cloud-storage'")
+                
+                # Initialize GCS credentials only when needed
+                self._init_gcs_credentials()
                     
                 # Debug: Print GCS credentials being used
                 if self.gcs_credentials_path:
@@ -288,6 +293,9 @@ class EmpropsTextCloudStorageSaver:
             elif provider == "azure":
                 if not self.azure_available:
                     raise ValueError("Azure Blob Storage is not available. Install with 'pip install azure-storage-blob'")
+                
+                # Initialize Azure credentials only when needed
+                self._init_azure_credentials()
                     
                 # Debug: Print Azure credentials being used
                 if self.azure_account_name:

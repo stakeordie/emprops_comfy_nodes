@@ -42,7 +42,7 @@ class EmpropsTextCloudStorageSaver:
                 pass  # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00]
                 # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Google Cloud Storage support is available")  # Non-critical: provider check
             else:
-                # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Google Cloud Storage support is not available. Install with 'pip install google-cloud-storage'")  # Non-critical: provider check
+                pass  # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug("Google Cloud Storage support is not available. Install with 'pip install google-cloud-storage'")  # Non-critical: provider check
             
             # Check if Azure Blob Storage is available
             # [REMOVED NON-CRITICAL LOG 2025-05-11T13:14:14-04:00] log_debug(f"Checking Azure availability: {AZURE_AVAILABLE}")  # Non-critical: provider check

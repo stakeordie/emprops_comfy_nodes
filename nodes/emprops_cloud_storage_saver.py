@@ -36,7 +36,7 @@ class EmpropsCloudStorageSaver:
             log_debug("Setting up common properties")
             self.default_bucket = "emprops-share"
             self.image_helper = ImageSaveHelper()
-            self.type = "s3_output"  # Keep the same type for backward compatibility
+            self.type = "output"  # Use "output" for proper ComfyUI preview display
             self.output_dir = folder_paths.get_output_directory()
             self.compress_level = 4
             log_debug(f"Output directory: {self.output_dir}")
@@ -205,37 +205,61 @@ class EmpropsCloudStorageSaver:
         log_debug(f"Images type: {type(images)}, shape: {images.shape if hasattr(images, 'shape') else 'unknown'}")
         log_debug(f"Prompt: {'Present' if prompt else 'None'}, extra_pnginfo: {'Present' if extra_pnginfo else 'None'}")
         
-        # First save locally for preview (like standard SaveImage node)
-        import folder_paths
-        full_output_folder, local_filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
-            filename.replace(".png", "").replace(".jpg", "").replace(".jpeg", "").replace(".webp", ""), 
-            self.output_dir, 
-            images[0].shape[1], 
-            images[0].shape[0]
-        )
+        print("[EmProps] ABOUT TO START LOCAL SAVE SECTION", flush=True)
         
-        local_results = []
-        for (batch_number, image) in enumerate(images):
-            i = 255. * image.cpu().numpy()
-            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
-            metadata = None
-            if prompt is not None or extra_pnginfo is not None:
-                metadata = PngInfo()
-                if prompt is not None:
-                    metadata.add_text("prompt", json.dumps(prompt))
-                if extra_pnginfo is not None:
-                    for x in extra_pnginfo:
-                        metadata.add_text(x, json.dumps(extra_pnginfo[x]))
+        # First save locally for preview (like standard SaveImage node)
+        try:
+            print("[EmProps] INSIDE LOCAL SAVE TRY BLOCK", flush=True)
+            import folder_paths
+            log_debug(f"Starting local save for preview - filename: {filename}")
+            
+            filename_prefix_clean = filename.replace(".png", "").replace(".jpg", "").replace(".jpeg", "").replace(".webp", "")
+            log_debug(f"Using filename prefix: {filename_prefix_clean}")
+            
+            full_output_folder, local_filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
+                filename_prefix_clean, 
+                self.output_dir, 
+                images[0].shape[1], 
+                images[0].shape[0]
+            )
+            log_debug(f"Local save path info - folder: {full_output_folder}, filename: {local_filename}, counter: {counter}, subfolder: {subfolder}")
+            
+            local_results = []
+            for (batch_number, image) in enumerate(images):
+                log_debug(f"Processing image {batch_number} for local save")
+                i = 255. * image.cpu().numpy()
+                img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+                metadata = None
+                if prompt is not None or extra_pnginfo is not None:
+                    metadata = PngInfo()
+                    if prompt is not None:
+                        metadata.add_text("prompt", json.dumps(prompt))
+                    if extra_pnginfo is not None:
+                        for x in extra_pnginfo:
+                            metadata.add_text(x, json.dumps(extra_pnginfo[x]))
 
-            local_filename_with_batch = local_filename.replace("%batch_num%", str(batch_number))
-            local_file = f"{local_filename_with_batch}_{counter:05}_.png"
-            img.save(os.path.join(full_output_folder, local_file), pnginfo=metadata, compress_level=self.compress_level)
-            local_results.append({
-                "filename": local_file,
-                "subfolder": subfolder,
-                "type": self.type
-            })
-            counter += 1
+                local_filename_with_batch = local_filename.replace("%batch_num%", str(batch_number))
+                local_file = f"{local_filename_with_batch}_{counter:05}_.png"
+                local_full_path = os.path.join(full_output_folder, local_file)
+                
+                log_debug(f"Saving local file: {local_full_path}")
+                img.save(local_full_path, pnginfo=metadata, compress_level=self.compress_level)
+                log_debug(f"Successfully saved local file: {local_file}")
+                
+                local_results.append({
+                    "filename": local_file,
+                    "subfolder": subfolder,
+                    "type": self.type
+                })
+                counter += 1
+            
+            log_debug(f"Local results for UI: {local_results}")
+            
+        except Exception as local_save_error:
+            log_debug(f"ERROR in local save: {str(local_save_error)}\n{traceback.format_exc()}")
+            print(f"[EmProps] ERROR saving locally: {str(local_save_error)}", flush=True)
+            # Create empty local_results as fallback
+            local_results = []
         
         try:
             # Initialize the appropriate cloud storage client based on provider

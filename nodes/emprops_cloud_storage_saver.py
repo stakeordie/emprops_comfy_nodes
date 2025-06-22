@@ -4,6 +4,10 @@ import boto3  # type: ignore # Will be fixed with types-boto3
 import folder_paths  # type: ignore # Custom module without stubs
 import traceback
 import time
+import json
+import numpy as np
+from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 from dotenv import load_dotenv
 from typing import Optional, Tuple, List, Dict, Any
 from ..utils import unescape_env_value, S3Handler, GCSHandler, AzureHandler, GCS_AVAILABLE, AZURE_AVAILABLE
@@ -200,6 +204,39 @@ class EmpropsCloudStorageSaver:
         log_debug(f"save_to_cloud called with provider: {provider}, bucket: {bucket}, prefix: {prefix}, filename: {filename}")
         log_debug(f"Images type: {type(images)}, shape: {images.shape if hasattr(images, 'shape') else 'unknown'}")
         log_debug(f"Prompt: {'Present' if prompt else 'None'}, extra_pnginfo: {'Present' if extra_pnginfo else 'None'}")
+        
+        # First save locally for preview (like standard SaveImage node)
+        import folder_paths
+        full_output_folder, local_filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
+            filename.replace(".png", "").replace(".jpg", "").replace(".jpeg", "").replace(".webp", ""), 
+            self.output_dir, 
+            images[0].shape[1], 
+            images[0].shape[0]
+        )
+        
+        local_results = []
+        for (batch_number, image) in enumerate(images):
+            i = 255. * image.cpu().numpy()
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+            metadata = None
+            if prompt is not None or extra_pnginfo is not None:
+                metadata = PngInfo()
+                if prompt is not None:
+                    metadata.add_text("prompt", json.dumps(prompt))
+                if extra_pnginfo is not None:
+                    for x in extra_pnginfo:
+                        metadata.add_text(x, json.dumps(extra_pnginfo[x]))
+
+            local_filename_with_batch = local_filename.replace("%batch_num%", str(batch_number))
+            local_file = f"{local_filename_with_batch}_{counter:05}_.png"
+            img.save(os.path.join(full_output_folder, local_file), pnginfo=metadata, compress_level=self.compress_level)
+            local_results.append({
+                "filename": local_file,
+                "subfolder": subfolder,
+                "type": self.type
+            })
+            counter += 1
+        
         try:
             # Initialize the appropriate cloud storage client based on provider
             if provider == "aws":
@@ -369,7 +406,8 @@ class EmpropsCloudStorageSaver:
                         print(f"[EmProps] Error uploading to Azure: {str(e)}", flush=True)
                         raise e
             
-            return self.image_helper.format_ui_response(saved, prefix, self.type)
+            # Return the local preview results for UI display
+            return {"ui": {"images": local_results}}
             
         except Exception as e:
             print(f"[EmProps] Error saving to cloud storage: {str(e)}", flush=True)
@@ -434,212 +472,7 @@ class EmpropsCloudStorageSaver:
                 if attempt < max_attempts - 1:
                     print(f"[EmProps] Error checking Azure blob, retrying... attempt {attempt + 1}/{max_attempts}")
                     time.sleep(delay)
-
-RETURN_TYPES = ()  
-FUNCTION = "save_to_cloud"
-CATEGORY = "EmProps"
-OUTPUT_NODE = True
-DESCRIPTION = "Saves the input images to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with configurable bucket and prefix and displays them in the UI."
-
-def verify_s3_upload(self, s3_client, bucket: str, key: str, max_attempts: int = 5, delay: int = 1) -> bool:
-    """Verify that a file exists in S3 by checking with head_object"""
-    import time
-    
-    for attempt in range(max_attempts):
-        try:
-            # Initialize the appropriate cloud storage client based on provider
-            if provider == "aws":
-                # Debug: Print AWS credentials being used (first 4 chars only)
-                if self.aws_access_key:
-                    print(f"[EmProps] Debug - Using AWS Access Key ID: {self.aws_access_key[:4]}...")
-                if self.aws_secret_key:
-                    print(f"[EmProps] Debug - Using AWS Secret Key: {self.aws_secret_key[:4]}...")
-                print(f"[EmProps] Debug - Using AWS Region: {self.aws_region}")
-
-                # Initialize S3 client with explicit credentials
-                s3_client = boto3.client(
-                    's3',
-                    aws_access_key_id=self.aws_access_key,
-                    aws_secret_access_key=self.aws_secret_key,
-                    region_name=self.aws_region
-                )
-                
-                # Create S3Handler for verification
-                s3_handler = S3Handler(bucket)
-            elif provider == "google":
-                if not self.gcs_available:
-                    raise ValueError("Google Cloud Storage is not available. Install with 'pip install google-cloud-storage'")
-                    
-                # Debug: Print GCS credentials being used
-                if self.gcs_credentials_path:
-                    print(f"[EmProps] Debug - Using GCS credentials from: {self.gcs_credentials_path}")
                 else:
-                    print("[EmProps] Debug - Using default GCS credentials")
-                    
-                # Initialize GCS handler
-                gcs_handler = GCSHandler(bucket)
-                
-                # Check if GCS client is initialized
-                if not gcs_handler.gcs_client:
-                    raise ValueError("Failed to initialize Google Cloud Storage client. Check your credentials.")
-            elif provider == "azure":
-                if not self.azure_available:
-                    raise ValueError("Azure Blob Storage is not available. Install with 'pip install azure-storage-blob'")
-                
-                # Debug: Print Azure credentials being used
-                if self.azure_account_name:
-                    print(f"[EmProps] Debug - Using Azure Account Name: {self.azure_account_name}")
-                if self.azure_account_key:
-                    print(f"[EmProps] Debug - Using Azure Account Key: {self.azure_account_key[:4]}...")
-                print(f"[EmProps] Debug - Using Azure Container: {self.azure_container}")
-                
-                # Initialize Azure handler
-                log_debug(f"Initializing Azure handler with container: {bucket}")
-                azure_handler = AzureHandler(bucket)
-                
-                # Check if Azure client is initialized
-                if not azure_handler.blob_service_client or not azure_handler.container_client:
-                    raise ValueError("Failed to initialize Azure Blob Storage client. Check your credentials.")
-            else:
-                raise ValueError(f"Unsupported provider: {provider}")
-            
-            # Ensure prefix ends with '/'
-            if not prefix.endswith('/'):
-                prefix += '/'
-            
-            # Remove leading '/' if present
-            if prefix.startswith('/'):
-                prefix = prefix[1:]
-            
-            # Get the file extension and format from filename
-            ext = os.path.splitext(filename)[1].lower()
-            format_map = {
-                '.jpg': ('JPEG', 'image/jpeg'),
-                '.jpeg': ('JPEG', 'image/jpeg'),
-                '.png': ('PNG', 'image/png'),
-                '.gif': ('GIF', 'image/gif'),
-                '.webp': ('WEBP', 'image/webp'),
-                '.tiff': ('TIFF', 'image/tiff'),
-                '.bmp': ('BMP', 'image/bmp')
-            }
-            format_info = format_map.get(ext, ('PNG', 'image/png'))
-            
-            # Process images with format and mime type
-            processed = self.image_helper.process_images(
-                images, 
-                prompt=prompt, 
-                extra_pnginfo=extra_pnginfo,
-                format=format_info[0],
-                mime_type=format_info[1]
-            )
-            
-            saved = []
-            for idx, (image_bytes, metadata, mime_type) in enumerate(processed):
-                # Generate unique filename for each image
-                if len(processed) > 1:
-                    base, ext = os.path.splitext(filename)
-                    current_filename = f"{base}_{idx}{ext}"
-                else:
-                    current_filename = filename
-                
-                # Create the storage key (path) for the file
-                storage_key = prefix + current_filename
-                
-                # Upload based on provider
-                if provider == "aws":
-                    print(f"[EmProps] Uploading to AWS S3: {bucket}/{storage_key}", flush=True)
-                    
-                    # Upload to S3 with content type
-                    s3_client.upload_fileobj(
-                        image_bytes, 
-                        bucket, 
-                        storage_key,
-                        ExtraArgs={'ContentType': mime_type}
-                    )
-                    
-                    # Verify upload
-                    if self.verify_s3_upload(s3_client, bucket, storage_key):
-                        saved.append(current_filename)
-                        print(f"[EmProps] Successfully uploaded and verified: {bucket}/{storage_key}", flush=True)
-                    else:
-                        print(f"[EmProps] Failed to verify upload: {bucket}/{storage_key}", flush=True)
-                        
-                elif provider == "google":
-                    print(f"[EmProps] Uploading to Google Cloud Storage: {bucket}/{storage_key}", flush=True)
-                    
-                    try:
-                        # Get bucket and create blob
-                        bucket_obj = gcs_handler.gcs_client.bucket(bucket)
-                        blob = bucket_obj.blob(storage_key)
-                        
-                        # Upload from file-like object with content type
-                        blob.upload_from_file(
-                            image_bytes,
-                            content_type=mime_type,
-                            rewind=True  # Rewind the file pointer to the beginning
-                        )
-                        
-                        # Verify upload
-                        if self.verify_gcs_upload(gcs_handler, storage_key):
-                            saved.append(current_filename)
-                            print(f"[EmProps] Successfully uploaded and verified: {bucket}/{storage_key}", flush=True)
-                        else:
-                            print(f"[EmProps] Failed to verify upload: {bucket}/{storage_key}", flush=True)
-                    except Exception as e:
-                        print(f"[EmProps] Error uploading to GCS: {str(e)}", flush=True)
-                        raise e
-                        
-                elif provider == "azure":
-                    if not self.azure_available:
-                        raise ValueError("Azure Blob Storage is not available. Install with 'pip install azure-storage-blob'")
-                        
-                    print(f"[EmProps] Uploading to Azure Blob Storage: {bucket}/{storage_key}", flush=True)
-                    
-                    try:
-                        # Debug: Print Azure credentials being used
-                        if self.azure_account_name:
-                            print(f"[EmProps] Debug - Using Azure Storage Account: {self.azure_account_name}")
-                        if self.azure_account_key:
-                            print(f"[EmProps] Debug - Using Azure Storage Key: {self.azure_account_key[:4]}...")
-                        print(f"[EmProps] Debug - Using Azure Container: {bucket}")
-                        
-                        # Initialize Azure handler with the specified bucket (container)
-                        log_debug(f"Initializing Azure handler with container: {bucket}")
-                        azure_handler = AzureHandler(bucket)
-                        
-                        # Upload directly from memory stream
-                        log_debug(f"Uploading to Azure blob: {storage_key}")
-                        blob_client = azure_handler.container_client.get_blob_client(storage_key)
-                        
-                        # Rewind the file pointer to the beginning
-                        image_bytes.seek(0)
-                        
-                        # Upload the blob with content settings
-                        from azure.storage.blob import ContentSettings
-                        content_settings = ContentSettings(content_type=mime_type)
-                        blob_client.upload_blob(
-                            image_bytes, 
-                            overwrite=True, 
-                            content_settings=content_settings
-                        )
-                        
-                        # Verify upload using our dedicated verification method
-                        if self.verify_azure_upload(azure_handler, storage_key):
-                            saved.append(current_filename)
-                            print(f"[EmProps] Successfully uploaded and verified: {bucket}/{storage_key}", flush=True)
-                        else:
-                            print(f"[EmProps] Failed to verify upload: {bucket}/{storage_key}", flush=True)
-                    except Exception as e:
-                        log_debug(f"Error uploading to Azure: {str(e)}\n{traceback.format_exc()}")
-                        print(f"[EmProps] Error uploading to Azure: {str(e)}", flush=True)
-                        raise e
-            
-            return self.image_helper.format_ui_response(saved, prefix, self.type)
-            
-        except Exception as e:
-            print(f"[EmProps] Error saving to cloud storage: {str(e)}", flush=True)
-            raise e
-
-
-# Added: 2025-04-20T19:41:30-04:00 - Removed backward compatibility class
-# The backward compatibility is now handled through NODE_CLASS_MAPPINGS in __init__.py
+                    print(f"[EmProps] Warning: Could not verify Azure upload: {str(e)}")
+                    return False
+        return False

@@ -476,13 +476,18 @@ class EmpropsCloudStorageSaver:
         
     # Added: 2025-05-07T14:11:24-04:00 - Azure verification method
     def verify_azure_upload(self, azure_handler: AzureHandler, key: str, max_attempts: int = 5, delay: int = 1) -> bool:
-        """Verify that a file exists in Azure Blob Storage by checking with exists method"""
+        """Verify that a file exists in Azure Blob Storage and is available via CDN"""
         import time
+        import requests
         
+        # First verify blob storage
+        blob_verified = False
         for attempt in range(max_attempts):
             try:
                 if azure_handler.object_exists(key):
-                    return True
+                    blob_verified = True
+                    print(f"[EmProps] Azure blob verified: {key}")
+                    break
                 if attempt < max_attempts - 1:
                     print(f"[EmProps] Waiting for Azure blob to be available... attempt {attempt + 1}/{max_attempts}")
                     time.sleep(delay)
@@ -496,4 +501,41 @@ class EmpropsCloudStorageSaver:
                 else:
                     print(f"[EmProps] Warning: Could not verify Azure upload: {str(e)}")
                     return False
+        
+        if not blob_verified:
+            return False
+        
+        # Now verify CDN availability
+        cdn_url = f"https://cdn.emprops.ai/{key}"
+        print(f"[EmProps] Verifying CDN availability at: {cdn_url}")
+        
+        # Increase max attempts for CDN propagation (30 seconds with 6 attempts of 5 seconds each)
+        cdn_max_attempts = 6
+        cdn_delay = 5
+        
+        for attempt in range(cdn_max_attempts):
+            try:
+                response = requests.head(cdn_url, timeout=10)
+                if response.status_code == 200:
+                    print(f"[EmProps] CDN verified: {cdn_url}")
+                    return True
+                elif response.status_code == 404:
+                    if attempt < cdn_max_attempts - 1:
+                        print(f"[EmProps] Waiting for CDN propagation... attempt {attempt + 1}/{cdn_max_attempts} (status: {response.status_code})")
+                        time.sleep(cdn_delay)
+                    else:
+                        print(f"[EmProps] Warning: CDN not available after {cdn_max_attempts * cdn_delay} seconds")
+                        return False
+                else:
+                    print(f"[EmProps] Unexpected CDN response status: {response.status_code}")
+                    if attempt < cdn_max_attempts - 1:
+                        time.sleep(cdn_delay)
+            except requests.exceptions.RequestException as e:
+                if attempt < cdn_max_attempts - 1:
+                    print(f"[EmProps] Error checking CDN, retrying... attempt {attempt + 1}/{cdn_max_attempts}: {str(e)}")
+                    time.sleep(cdn_delay)
+                else:
+                    print(f"[EmProps] Warning: Could not verify CDN availability: {str(e)}")
+                    return False
+        
         return False

@@ -134,6 +134,10 @@ class EmpropsCloudStorageSaver:
                 self.default_provider = 'aws'
             log_debug(f"Default cloud provider from environment: {self.default_provider}")
             
+            # Added: 2025-06-29 - Use CLOUD_STORAGE_CONTAINER for CDN check
+            self.production_cdn_container = os.getenv('CLOUD_STORAGE_CONTAINER', 'emprops-production')
+            log_debug(f"Production CDN container: {self.production_cdn_container}")
+            
             log_debug("EmpropsCloudStorageSaver initialization completed successfully")
         except Exception as e:
             log_debug(f"ERROR in EmpropsCloudStorageSaver.__init__: {str(e)}\n{traceback.format_exc()}")
@@ -417,7 +421,7 @@ class EmpropsCloudStorageSaver:
                         )
                         
                         # Verify upload using our dedicated verification method
-                        if self.verify_azure_upload(azure_handler, storage_key):
+                        if self.verify_azure_upload(azure_handler, storage_key, bucket):
                             saved.append(current_filename)
                             print(f"[EmProps] Successfully uploaded and verified: {bucket}/{storage_key}", flush=True)
                         else:
@@ -475,8 +479,9 @@ class EmpropsCloudStorageSaver:
         return False
         
     # Added: 2025-05-07T14:11:24-04:00 - Azure verification method
-    def verify_azure_upload(self, azure_handler: AzureHandler, key: str, max_attempts: int = 5, delay: int = 1) -> bool:
-        """Verify that a file exists in Azure Blob Storage and is available via CDN"""
+    # Updated: 2025-06-29 - Only check CDN for production bucket
+    def verify_azure_upload(self, azure_handler: AzureHandler, key: str, bucket: str, max_attempts: int = 5, delay: int = 1) -> bool:
+        """Verify that a file exists in Azure Blob Storage and optionally check CDN availability for production bucket"""
         import time
         import requests
         
@@ -505,7 +510,12 @@ class EmpropsCloudStorageSaver:
         if not blob_verified:
             return False
         
-        # Now verify CDN availability
+        # Only check CDN for production container
+        if bucket != self.production_cdn_container:
+            print(f"[EmProps] Skipping CDN check for non-production container: {bucket}")
+            return True
+        
+        # Now verify CDN availability for production bucket
         cdn_url = f"https://cdn.emprops.ai/{key}"
         print(f"[EmProps] Verifying CDN availability at: {cdn_url}")
         

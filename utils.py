@@ -441,6 +441,7 @@ class AzureHandler:
                 self.container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'test')
         
         # Get Azure-specific credentials from environment
+        # Updated to use new environment variable names
         self.account_name = os.getenv('AZURE_STORAGE_ACCOUNT')
         self.account_key = os.getenv('AZURE_STORAGE_KEY')
         

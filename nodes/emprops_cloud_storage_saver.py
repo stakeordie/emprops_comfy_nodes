@@ -516,7 +516,9 @@ class EmpropsCloudStorageSaver:
             return True
         
         # Now verify CDN availability for production bucket
-        cdn_url = f"https://cdn.emprops.ai/{key}"
+        # Use CDN_URI from environment if available, otherwise fall back to default
+        cdn_base = os.getenv('CDN_URI', 'https://cdn.emprops.ai')
+        cdn_url = f"{cdn_base}/{key}"
         print(f"[EmProps] Verifying CDN availability at: {cdn_url}")
         
         # Increase max attempts for CDN propagation (30 seconds with 6 attempts of 5 seconds each)

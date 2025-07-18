@@ -135,7 +135,8 @@ class EmpropsCloudStorageSaver:
             log_debug(f"Default cloud provider from environment: {self.default_provider}")
             
             # Added: 2025-06-29 - Use CLOUD_STORAGE_CONTAINER for CDN check
-            self.production_cdn_container = os.getenv('CLOUD_STORAGE_CONTAINER', 'emprops-production')
+            # Default container for CDN verification - can be overridden by API bucket parameter
+            self.production_cdn_container = os.getenv('CLOUD_STORAGE_CONTAINER', 'emprops-development')
             log_debug(f"Production CDN container: {self.production_cdn_container}")
             
             log_debug("EmpropsCloudStorageSaver initialization completed successfully")

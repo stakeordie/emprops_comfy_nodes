@@ -519,6 +519,9 @@ class EmpropsCloudStorageSaver:
         # Now verify CDN availability for production bucket
         # Use CDN_URI from environment if available, otherwise fall back to default
         cdn_base = os.getenv('CDN_URI', 'https://cdn.emprops.ai')
+        # Ensure CDN base has a proper scheme
+        if not cdn_base.startswith(('http://', 'https://')):
+            cdn_base = f"https://{cdn_base}"
         cdn_url = f"{cdn_base}/{key}"
         print(f"[EmProps] Verifying CDN availability at: {cdn_url}")
         

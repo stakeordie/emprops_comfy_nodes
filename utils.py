@@ -67,15 +67,18 @@ def is_url(string):
 def try_download_file(url, chunk_size=8192):
     """
     Download a file from a URL to a temporary directory.
+    Automatically detects image format and adds correct extension.
     
     Args:
         url (str): URL to download from
         chunk_size (int): Size of chunks to download
         
     Returns:
-        str: Path to downloaded file or None if download fails
+        str: Path to downloaded file with correct extension or None if download fails
     """
     try:
+        import imghdr
+        
         # Setup headers to mimic a browser request
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -88,20 +91,75 @@ def try_download_file(url, chunk_size=8192):
         parsed_url = urllib.parse.urlparse(url)
         filename = os.path.basename(parsed_url.path)
         if not filename:
-            filename = 'downloaded_image.jpg'
+            filename = 'downloaded_image'
             
         # Create temp directory if it doesn't exist
         temp_dir = folder_paths.get_temp_directory()
         os.makedirs(temp_dir, exist_ok=True)
         
-        # Download the file
-        local_filename = os.path.join(temp_dir, filename)
+        # Download to temporary file first
+        temp_filename = os.path.join(temp_dir, filename)
         with requests.get(url, stream=True, headers=headers) as r:
             r.raise_for_status()
-            with open(local_filename, 'wb') as f:
+            
+            # Try to get content type from headers
+            content_type = r.headers.get('content-type', '').lower()
+            extension_from_headers = None
+            if 'image/jpeg' in content_type or 'image/jpg' in content_type:
+                extension_from_headers = '.jpg'
+            elif 'image/png' in content_type:
+                extension_from_headers = '.png'
+            elif 'image/gif' in content_type:
+                extension_from_headers = '.gif'
+            elif 'image/webp' in content_type:
+                extension_from_headers = '.webp'
+            elif 'image/bmp' in content_type:
+                extension_from_headers = '.bmp'
+            elif 'image/tiff' in content_type:
+                extension_from_headers = '.tiff'
+            
+            # Write to temporary file
+            with open(temp_filename, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=chunk_size):
                     f.write(chunk)
-        return local_filename
+        
+        # Detect image format from file content
+        detected_format = imghdr.what(temp_filename)
+        
+        # Determine the correct extension
+        extension = None
+        if detected_format:
+            # Map imghdr formats to extensions
+            format_to_ext = {
+                'jpeg': '.jpg',
+                'png': '.png', 
+                'gif': '.gif',
+                'bmp': '.bmp',
+                'tiff': '.tiff',
+                'webp': '.webp'
+            }
+            extension = format_to_ext.get(detected_format)
+        
+        # Fallback to headers if detection failed
+        if not extension:
+            extension = extension_from_headers
+            
+        # Final fallback
+        if not extension:
+            extension = '.jpg'
+            
+        # If filename already has the correct extension, return as-is
+        if filename.lower().endswith(extension.lower()):
+            print(f"[EmProps] Downloaded image: {temp_filename} (format: {detected_format or 'unknown'})")
+            return temp_filename
+        
+        # Rename file to include correct extension
+        final_filename = temp_filename + extension
+        os.rename(temp_filename, final_filename)
+        
+        print(f"[EmProps] Downloaded image: {final_filename} (format: {detected_format or extension_from_headers or 'detected'})")
+        return final_filename
+        
     except Exception as e:
         print(f"[EmProps] Error downloading file: {str(e)}")
         return None

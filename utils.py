@@ -126,6 +126,17 @@ def try_download_file(url, chunk_size=8192):
         # Detect image format from file content
         detected_format = imghdr.what(temp_filename)
         
+        # Additional manual detection for JPEG if imghdr fails
+        if not detected_format:
+            try:
+                with open(temp_filename, 'rb') as f:
+                    header = f.read(4)
+                    if header.startswith(b'\xff\xd8\xff'):
+                        detected_format = 'jpeg'
+                        print(f"[EmProps] Manual JPEG detection successful")
+            except Exception as e:
+                print(f"[EmProps] Manual format detection failed: {e}")
+        
         # Determine the correct extension
         extension = None
         if detected_format:
@@ -139,14 +150,28 @@ def try_download_file(url, chunk_size=8192):
                 'webp': '.webp'
             }
             extension = format_to_ext.get(detected_format)
+            print(f"[EmProps] Detected format: {detected_format}, extension: {extension}")
         
         # Fallback to headers if detection failed
         if not extension:
             extension = extension_from_headers
+            print(f"[EmProps] Using extension from headers: {extension}")
             
         # Final fallback
         if not extension:
             extension = '.jpg'
+            print(f"[EmProps] Using fallback extension: {extension}")
+        
+        # Verify the file is readable before proceeding
+        try:
+            from PIL import Image
+            test_img = Image.open(temp_filename)
+            test_img.verify()
+            test_img.close()
+            print(f"[EmProps] File verification successful")
+        except Exception as e:
+            print(f"[EmProps] Warning: Downloaded file may be corrupted: {e}")
+            # Still continue, but log the issue
             
         # If filename already has the correct extension, return as-is
         if filename.lower().endswith(extension.lower()):
@@ -155,7 +180,22 @@ def try_download_file(url, chunk_size=8192):
         
         # Rename file to include correct extension
         final_filename = temp_filename + extension
-        os.rename(temp_filename, final_filename)
+        try:
+            os.rename(temp_filename, final_filename)
+            print(f"[EmProps] Successfully renamed {temp_filename} to {final_filename}")
+            
+            # Verify the renamed file exists and is readable
+            if not os.path.exists(final_filename):
+                print(f"[EmProps] Error: Renamed file {final_filename} does not exist!")
+                return None
+                
+            # Check file size
+            file_size = os.path.getsize(final_filename)
+            print(f"[EmProps] Final file size: {file_size} bytes")
+            
+        except Exception as rename_error:
+            print(f"[EmProps] Error renaming file: {rename_error}")
+            return None
         
         print(f"[EmProps] Downloaded image: {final_filename} (format: {detected_format or extension_from_headers or 'detected'})")
         return final_filename

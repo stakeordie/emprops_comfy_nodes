@@ -64,7 +64,7 @@ def is_url(string):
     except:
         return False
 
-def try_download_file(url, chunk_size=8192):
+def try_download_file(url, chunk_size=8192, max_retries=3):
     """
     Download a file from a URL to a temporary directory.
     Automatically detects image format and adds correct extension.
@@ -72,137 +72,230 @@ def try_download_file(url, chunk_size=8192):
     Args:
         url (str): URL to download from
         chunk_size (int): Size of chunks to download
+        max_retries (int): Maximum number of retry attempts
         
     Returns:
         str: Path to downloaded file with correct extension or None if download fails
     """
-    try:
-        import imghdr
+    import imghdr
+    
+    # Try multiple download methods if first fails
+    download_methods = [
+        ("requests_stream", lambda: _download_with_requests_stream(url, chunk_size)),
+        ("requests_simple", lambda: _download_with_requests_simple(url)),
+        ("urllib", lambda: _download_with_urllib(url))
+    ]
+    
+    for retry in range(max_retries):
+        print(f"[EmProps] Download attempt {retry + 1}/{max_retries}")
         
-        # Setup headers to mimic a browser request
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://www.google.com/'
-        }
-        
-        # Get the filename from the URL
-        parsed_url = urllib.parse.urlparse(url)
-        filename = os.path.basename(parsed_url.path)
-        if not filename:
-            filename = 'downloaded_image'
-            
-        # Create temp directory if it doesn't exist
-        temp_dir = folder_paths.get_temp_directory()
-        os.makedirs(temp_dir, exist_ok=True)
-        
-        # Download to temporary file first
-        temp_filename = os.path.join(temp_dir, filename)
-        with requests.get(url, stream=True, headers=headers) as r:
-            r.raise_for_status()
-            
-            # Try to get content type from headers
-            content_type = r.headers.get('content-type', '').lower()
-            extension_from_headers = None
-            if 'image/jpeg' in content_type or 'image/jpg' in content_type:
-                extension_from_headers = '.jpg'
-            elif 'image/png' in content_type:
-                extension_from_headers = '.png'
-            elif 'image/gif' in content_type:
-                extension_from_headers = '.gif'
-            elif 'image/webp' in content_type:
-                extension_from_headers = '.webp'
-            elif 'image/bmp' in content_type:
-                extension_from_headers = '.bmp'
-            elif 'image/tiff' in content_type:
-                extension_from_headers = '.tiff'
-            
-            # Write to temporary file
-            with open(temp_filename, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=chunk_size):
-                    f.write(chunk)
-        
-        # Detect image format from file content
-        detected_format = imghdr.what(temp_filename)
-        
-        # Additional manual detection for JPEG if imghdr fails
-        if not detected_format:
+        for method_name, download_func in download_methods:
             try:
-                with open(temp_filename, 'rb') as f:
-                    header = f.read(4)
-                    if header.startswith(b'\xff\xd8\xff'):
-                        detected_format = 'jpeg'
-                        print(f"[EmProps] Manual JPEG detection successful")
-            except Exception as e:
-                print(f"[EmProps] Manual format detection failed: {e}")
-        
-        # Determine the correct extension
-        extension = None
-        if detected_format:
-            # Map imghdr formats to extensions
-            format_to_ext = {
-                'jpeg': '.jpg',
-                'png': '.png', 
-                'gif': '.gif',
-                'bmp': '.bmp',
-                'tiff': '.tiff',
-                'webp': '.webp'
-            }
-            extension = format_to_ext.get(detected_format)
-            print(f"[EmProps] Detected format: {detected_format}, extension: {extension}")
-        
-        # Fallback to headers if detection failed
-        if not extension:
-            extension = extension_from_headers
-            print(f"[EmProps] Using extension from headers: {extension}")
-            
-        # Final fallback
-        if not extension:
-            extension = '.jpg'
-            print(f"[EmProps] Using fallback extension: {extension}")
-        
-        # Verify the file is readable before proceeding
-        try:
-            from PIL import Image
-            test_img = Image.open(temp_filename)
-            test_img.verify()
-            test_img.close()
-            print(f"[EmProps] File verification successful")
-        except Exception as e:
-            print(f"[EmProps] Warning: Downloaded file may be corrupted: {e}")
-            # Still continue, but log the issue
-            
-        # If filename already has the correct extension, return as-is
-        if filename.lower().endswith(extension.lower()):
-            print(f"[EmProps] Downloaded image: {temp_filename} (format: {detected_format or 'unknown'})")
-            return temp_filename
-        
-        # Rename file to include correct extension
-        final_filename = temp_filename + extension
-        try:
-            os.rename(temp_filename, final_filename)
-            print(f"[EmProps] Successfully renamed {temp_filename} to {final_filename}")
-            
-            # Verify the renamed file exists and is readable
-            if not os.path.exists(final_filename):
-                print(f"[EmProps] Error: Renamed file {final_filename} does not exist!")
-                return None
+                print(f"[EmProps] Trying {method_name} method...")
+                temp_filename, content_type, expected_size = download_func()
                 
-            # Check file size
-            file_size = os.path.getsize(final_filename)
-            print(f"[EmProps] Final file size: {file_size} bytes")
-            
-        except Exception as rename_error:
-            print(f"[EmProps] Error renaming file: {rename_error}")
-            return None
+                if temp_filename and os.path.exists(temp_filename):
+                    actual_size = os.path.getsize(temp_filename)
+                    print(f"[EmProps] {method_name} downloaded {actual_size} bytes")
+                    
+                    # Verify download integrity
+                    if expected_size and actual_size != expected_size:
+                        print(f"[EmProps] Size mismatch with {method_name}: got {actual_size}, expected {expected_size}")
+                        if os.path.exists(temp_filename):
+                            os.remove(temp_filename)
+                        continue
+                    
+                    # Try to verify it's a valid image
+                    try:
+                        from PIL import Image
+                        test_img = Image.open(temp_filename)
+                        test_img.verify()
+                        test_img.close()
+                        print(f"[EmProps] {method_name} success - valid image file")
+                        
+                        return _process_downloaded_file(temp_filename, content_type)
+                        
+                    except Exception as verify_error:
+                        print(f"[EmProps] {method_name} downloaded file is corrupted: {verify_error}")
+                        if os.path.exists(temp_filename):
+                            os.remove(temp_filename)
+                        continue
+                        
+            except Exception as download_error:
+                print(f"[EmProps] {method_name} failed: {download_error}")
+                continue
         
-        print(f"[EmProps] Downloaded image: {final_filename} (format: {detected_format or extension_from_headers or 'detected'})")
+        if retry < max_retries - 1:
+            import time
+            wait_time = (retry + 1) * 2
+            print(f"[EmProps] All methods failed, waiting {wait_time}s before retry...")
+            time.sleep(wait_time)
+    
+    print(f"[EmProps] All download attempts failed after {max_retries} retries")
+    return None
+
+def _download_with_requests_stream(url, chunk_size=8192):
+    """Download using requests with streaming"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.google.com/'
+    }
+    
+    parsed_url = urllib.parse.urlparse(url)
+    filename = os.path.basename(parsed_url.path) or 'downloaded_image'
+    temp_dir = folder_paths.get_temp_directory()
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_filename = os.path.join(temp_dir, filename)
+    
+    with requests.get(url, stream=True, headers=headers, timeout=60) as r:
+        r.raise_for_status()
+        
+        content_length = r.headers.get('content-length')
+        content_type = r.headers.get('content-type', '').lower()
+        expected_size = int(content_length) if content_length else None
+        
+        print(f"[EmProps] requests_stream: Content-Length={content_length}, Content-Type={content_type}")
+        
+        bytes_downloaded = 0
+        with open(temp_filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    f.write(chunk)
+                    bytes_downloaded += len(chunk)
+        
+        print(f"[EmProps] requests_stream: Downloaded {bytes_downloaded} bytes")
+        return temp_filename, content_type, expected_size
+
+def _download_with_requests_simple(url):
+    """Download using simple requests.get()"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/*,*/*;q=0.8'
+    }
+    
+    parsed_url = urllib.parse.urlparse(url)
+    filename = os.path.basename(parsed_url.path) or 'downloaded_image'
+    temp_dir = folder_paths.get_temp_directory()
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_filename = os.path.join(temp_dir, filename)
+    
+    response = requests.get(url, headers=headers, timeout=60)
+    response.raise_for_status()
+    
+    content_type = response.headers.get('content-type', '').lower()
+    expected_size = len(response.content)
+    
+    with open(temp_filename, 'wb') as f:
+        f.write(response.content)
+    
+    print(f"[EmProps] requests_simple: Downloaded {expected_size} bytes")
+    return temp_filename, content_type, expected_size
+
+def _download_with_urllib(url):
+    """Download using urllib"""
+    import urllib.request
+    
+    parsed_url = urllib.parse.urlparse(url)
+    filename = os.path.basename(parsed_url.path) or 'downloaded_image'
+    temp_dir = folder_paths.get_temp_directory()
+    os.makedirs(temp_dir, exist_ok=True)
+    temp_filename = os.path.join(temp_dir, filename)
+    
+    req = urllib.request.Request(url)
+    req.add_header('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36')
+    req.add_header('Accept', 'image/*,*/*;q=0.8')
+    
+    with urllib.request.urlopen(req, timeout=60) as response:
+        content_type = response.headers.get('content-type', '').lower()
+        content_length = response.headers.get('content-length')
+        expected_size = int(content_length) if content_length else None
+        
+        data = response.read()
+        actual_size = len(data)
+        
+        with open(temp_filename, 'wb') as f:
+            f.write(data)
+        
+        print(f"[EmProps] urllib: Downloaded {actual_size} bytes")
+        return temp_filename, content_type, expected_size
+
+def _process_downloaded_file(temp_filename, content_type):
+    """Process downloaded file - detect format and add extension"""
+    import imghdr
+    
+    # Get the filename from the path
+    filename = os.path.basename(temp_filename)
+    
+    # Detect image format from file content
+    detected_format = imghdr.what(temp_filename)
+    
+    # Additional manual detection for JPEG if imghdr fails
+    if not detected_format:
+        try:
+            with open(temp_filename, 'rb') as f:
+                header = f.read(4)
+                if header.startswith(b'\xff\xd8\xff'):
+                    detected_format = 'jpeg'
+                    print(f"[EmProps] Manual JPEG detection successful")
+        except Exception as e:
+            print(f"[EmProps] Manual format detection failed: {e}")
+    
+    # Determine the correct extension
+    extension = None
+    if detected_format:
+        format_to_ext = {
+            'jpeg': '.jpg', 'png': '.png', 'gif': '.gif',
+            'bmp': '.bmp', 'tiff': '.tiff', 'webp': '.webp'
+        }
+        extension = format_to_ext.get(detected_format)
+        print(f"[EmProps] Detected format: {detected_format}, extension: {extension}")
+    
+    # Fallback to headers if detection failed
+    if not extension:
+        if 'image/jpeg' in content_type or 'image/jpg' in content_type:
+            extension = '.jpg'
+        elif 'image/png' in content_type:
+            extension = '.png'
+        elif 'image/gif' in content_type:
+            extension = '.gif'
+        elif 'image/webp' in content_type:
+            extension = '.webp'
+        elif 'image/bmp' in content_type:
+            extension = '.bmp'
+        elif 'image/tiff' in content_type:
+            extension = '.tiff'
+        print(f"[EmProps] Using extension from headers: {extension}")
+    
+    # Final fallback
+    if not extension:
+        extension = '.jpg'
+        print(f"[EmProps] Using fallback extension: {extension}")
+    
+    # If filename already has the correct extension, return as-is
+    if filename.lower().endswith(extension.lower()):
+        print(f"[EmProps] File already has correct extension: {temp_filename}")
+        return temp_filename
+    
+    # Rename file to include correct extension
+    final_filename = temp_filename + extension
+    try:
+        os.rename(temp_filename, final_filename)
+        print(f"[EmProps] Successfully renamed {temp_filename} to {final_filename}")
+        
+        if not os.path.exists(final_filename):
+            print(f"[EmProps] Error: Renamed file {final_filename} does not exist!")
+            return None
+            
+        file_size = os.path.getsize(final_filename)
+        print(f"[EmProps] Final file size: {file_size} bytes")
         return final_filename
         
-    except Exception as e:
-        print(f"[EmProps] Error downloading file: {str(e)}")
+    except Exception as rename_error:
+        print(f"[EmProps] Error renaming file: {rename_error}")
         return None
+
 
 def _process_secret_key(secret_key: str) -> str:
     """Process AWS secret key by replacing _SLASH_ with /"""

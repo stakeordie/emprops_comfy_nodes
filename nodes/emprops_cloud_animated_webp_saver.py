@@ -169,7 +169,7 @@ class EmpropsCloudAnimatedWebpSaver:
                     "images": ("IMAGE",),
                     "provider": (providers,),
                     "prefix": ("STRING", {"default": "uploads/"}),
-                    "filename_prefix": ("STRING", {"default": "ComfyUI"}),
+                    "filename": ("STRING", {"default": "ComfyUI"}),
                     "bucket": ("STRING", {"default": "emprops-share"}),
                     "fps": ("FLOAT", {"default": 6.0, "min": 0.01, "max": 1000.0, "step": 0.01}),
                     "lossless": ("BOOLEAN", {"default": True}),
@@ -191,7 +191,7 @@ class EmpropsCloudAnimatedWebpSaver:
                     "images": ("IMAGE",),
                     "provider": (["aws"],),
                     "prefix": ("STRING", {"default": "uploads/"}),
-                    "filename_prefix": ("STRING", {"default": "ComfyUI"}),
+                    "filename": ("STRING", {"default": "ComfyUI"}),
                     "bucket": ("STRING", {"default": "emprops-share"}),
                     "fps": ("FLOAT", {"default": 6.0, "min": 0.01, "max": 1000.0, "step": 0.01}),
                     "lossless": ("BOOLEAN", {"default": True}),
@@ -210,7 +210,7 @@ class EmpropsCloudAnimatedWebpSaver:
     OUTPUT_NODE = True
     DESCRIPTION = "Saves animated WEBP files to cloud storage (AWS S3, Google Cloud Storage, or Azure Blob Storage) with configurable settings and displays them in the UI."
 
-    def save_animated_webp_to_cloud(self, images, provider=None, prefix="uploads/", filename_prefix="ComfyUI", bucket="emprops-share", fps=6.0, lossless=True, quality=80, method="default", prompt=None, extra_pnginfo=None):
+    def save_animated_webp_to_cloud(self, images, provider=None, prefix="uploads/", filename="ComfyUI", bucket="emprops-share", fps=6.0, lossless=True, quality=80, method="default", prompt=None, extra_pnginfo=None):
         """Save animated WEBP to cloud storage with the specified settings"""
         # Use default provider from environment if not specified
         if provider is None:
@@ -220,21 +220,21 @@ class EmpropsCloudAnimatedWebpSaver:
         # Get WebP compression method
         webp_method = self.methods.get(method, 4)
 
-        log_debug(f"save_animated_webp_to_cloud called with provider: {provider}, bucket: {bucket}, prefix: {prefix}, filename_prefix: {filename_prefix}")
+        log_debug(f"save_animated_webp_to_cloud called with provider: {provider}, bucket: {bucket}, prefix: {prefix}, filename: {filename}")
         log_debug(f"WebP settings - fps: {fps}, lossless: {lossless}, quality: {quality}, method: {method} ({webp_method})")
         log_debug(f"Images type: {type(images)}, shape: {images.shape if hasattr(images, 'shape') else 'unknown'}")
         log_debug(f"Prompt: {'Present' if prompt else 'None'}, extra_pnginfo: {'Present' if extra_pnginfo else 'None'}")
 
         # First save locally for preview (based on SaveAnimatedWEBP logic)
         try:
-            filename_prefix += self.prefix_append
-            full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
-                filename_prefix,
+            # Use the filename directly without any prefix appending
+            full_output_folder, local_filename, counter, subfolder, _ = folder_paths.get_save_image_path(
+                filename,
                 self.output_dir,
                 images[0].shape[1],
                 images[0].shape[0]
             )
-            log_debug(f"Local save path info - folder: {full_output_folder}, filename: {filename}, counter: {counter}, subfolder: {subfolder}")
+            log_debug(f"Local save path info - folder: {full_output_folder}, local_filename: {local_filename}, counter: {counter}, subfolder: {subfolder}")
 
             # Convert images to PIL format
             pil_images = []
@@ -255,7 +255,7 @@ class EmpropsCloudAnimatedWebpSaver:
                     initial_exif -= 1
             log_debug(f"Prepared metadata with {len(metadata)} entries")
 
-            # Save locally for UI preview
+            # Save locally for UI preview (use user-specified filename)
             local_file = f"{filename}_{counter:05}_.webp"
             local_full_path = os.path.join(full_output_folder, local_file)
 

@@ -40,6 +40,7 @@ from .nodes.emprops_clip_loader import EmProps_CLIP_Loader  # Added: 2025-05-30T
 from .nodes.emprops_style_model_loader import EmProps_Style_Model_Loader  # Added: 2025-06-02T10:32:10-04:00
 from .nodes.emprops_clip_vision_loader import EmProps_CLIP_Vision_Loader  # Added: 2025-06-02T10:32:10-04:00
 from .nodes.emprops_quadrupleclip_loader import EmProps_QuadrupleCLIP_Loader  # Added: 2025-06-23T14:45:00-08:00
+from .nodes.emprops_cloud_animated_webp_saver import EmpropsCloudAnimatedWebpSaver  # Added: 2025-01-30T10:00:00-08:00
 
 log_debug("Starting EmProps initialization")
 log_debug(f"Python path: {sys.path}")
@@ -111,6 +112,7 @@ try:
     "EmProps_Style_Model_Loader": EmProps_Style_Model_Loader,  # Added: 2025-06-02T10:32:10-04:00
     "EmProps_CLIP_Vision_Loader": EmProps_CLIP_Vision_Loader,  # Added: 2025-06-02T10:32:10-04:00
     "EmProps_QuadrupleCLIP_Loader": EmProps_QuadrupleCLIP_Loader,  # Added: 2025-06-23T14:45:00-08:00
+    "EmProps_Cloud_Animated_WEBP_Saver": EmpropsCloudAnimatedWebpSaver,  # Added: 2025-01-30T10:00:00-08:00
 }
     log_debug(f"NODE_CLASS_MAPPINGS created successfully with {len(NODE_CLASS_MAPPINGS)} entries")
     for node_name, node_class in NODE_CLASS_MAPPINGS.items():
@@ -140,6 +142,7 @@ try:
     "EmProps_Style_Model_Loader": "EmProps Load Style Model",  # Added: 2025-06-02T10:32:10-04:00
     "EmProps_CLIP_Vision_Loader": "EmProps Load CLIP Vision",  # Added: 2025-06-02T10:32:10-04:00
     "EmProps_QuadrupleCLIP_Loader": "EmProps QuadrupleCLIP Loader",  # Added: 2025-06-23T14:45:00-08:00
+    "EmProps_Cloud_Animated_WEBP_Saver": "EmProps Cloud Animated WEBP Saver",  # Added: 2025-01-30T10:00:00-08:00
 }
     log_debug(f"NODE_DISPLAY_NAME_MAPPINGS created successfully with {len(NODE_DISPLAY_NAME_MAPPINGS)} entries")
 except Exception as e:

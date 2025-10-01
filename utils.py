@@ -80,18 +80,22 @@ def try_download_file(url, chunk_size=8192, max_retries=3):
     import imghdr
     
     # Try multiple download methods if first fails
+    # Note: requests_simple first because some CDNs (like Cloudflare) provide incorrect
+    # content-length headers that break streaming downloads
     download_methods = [
-        ("requests_stream", lambda: _download_with_requests_stream(url, chunk_size)),
         ("requests_simple", lambda: _download_with_requests_simple(url)),
-        ("urllib", lambda: _download_with_urllib(url))
+        ("urllib", lambda: _download_with_urllib(url)),
+        ("requests_stream", lambda: _download_with_requests_stream(url, chunk_size))
     ]
     
     for retry in range(max_retries):
-        print(f"[EmProps] Download attempt {retry + 1}/{max_retries}")
+        if retry > 0:
+            print(f"[EmProps] Download attempt {retry + 1}/{max_retries}")
         
         for method_name, download_func in download_methods:
             try:
-                print(f"[EmProps] Trying {method_name} method...")
+                if retry > 0 or method_name != download_methods[0][0]:
+                    print(f"[EmProps] Trying {method_name} method...")
                 temp_filename, content_type, expected_size = download_func()
                 
                 if temp_filename and os.path.exists(temp_filename):
@@ -111,8 +115,6 @@ def try_download_file(url, chunk_size=8192, max_retries=3):
                         test_img = Image.open(temp_filename)
                         test_img.verify()
                         test_img.close()
-                        print(f"[EmProps] {method_name} success - valid image file")
-                        
                         return _process_downloaded_file(temp_filename, content_type)
                         
                     except Exception as verify_error:
@@ -165,7 +167,6 @@ def _download_with_requests_stream(url, chunk_size=8192):
                     f.write(chunk)
                     bytes_downloaded += len(chunk)
         
-        print(f"[EmProps] requests_stream: Downloaded {bytes_downloaded} bytes")
         return temp_filename, content_type, expected_size
 
 def _download_with_requests_simple(url):
@@ -190,7 +191,6 @@ def _download_with_requests_simple(url):
     with open(temp_filename, 'wb') as f:
         f.write(response.content)
     
-    print(f"[EmProps] requests_simple: Downloaded {expected_size} bytes")
     return temp_filename, content_type, expected_size
 
 def _download_with_urllib(url):
@@ -218,7 +218,6 @@ def _download_with_urllib(url):
         with open(temp_filename, 'wb') as f:
             f.write(data)
         
-        print(f"[EmProps] urllib: Downloaded {actual_size} bytes")
         return temp_filename, content_type, expected_size
 
 def _process_downloaded_file(temp_filename, content_type):
@@ -238,7 +237,6 @@ def _process_downloaded_file(temp_filename, content_type):
                 header = f.read(4)
                 if header.startswith(b'\xff\xd8\xff'):
                     detected_format = 'jpeg'
-                    print(f"[EmProps] Manual JPEG detection successful")
         except Exception as e:
             print(f"[EmProps] Manual format detection failed: {e}")
     
